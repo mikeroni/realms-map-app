@@ -369,34 +369,34 @@ def main():
                                     st.markdown(f"**Distance:** {step['distance']}")
                                     st.markdown(f"**Time:** ~{step['time']}")
                             
-                            # Map view with stored rail paths - using parent window navigation
-                    if stored['rail_paths']:
-                        map_url = view_on_map(stored['rail_paths'])
-                        st.markdown(
-                            f"""
-                            <style>
-                            .map-button {{
-                                color: white !important;
-                                text-decoration: none !important;
-                            }}
-                            </style>
-                            <a href="{map_url}" target="_top" class="map-button" style="
-                                display: inline-block;
-                                padding: 10px 20px;
-                                font-size: 16px;
-                                background-color: #4CAF50;
-                                text-align: center;
-                                border: none;
-                                border-radius: 5px;
-                                cursor: pointer;
-                                transition: all 0.2s ease;
-                                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                            " onclick="try {{ window.top.location.assign('{map_url}'); }} catch(e) {{ try {{ window.parent.location.assign('{map_url}'); }} catch(e2) {{ window.location.assign('{map_url}'); }} }} return false;">
-                                🗺️ View Train Route on Interactive Map
-                            </a>
-                            """,
-                            unsafe_allow_html=True
-                        )
+                            # Map view button - using parent window navigation
+                            if rail_paths:
+                                map_url = view_on_map(rail_paths)
+                                st.markdown(
+                                    f"""
+                                    <style>
+                                    .map-button {{
+                                        color: white !important;
+                                        text-decoration: none !important;
+                                    }}
+                                    </style>
+                                    <a href="{map_url}" target="_top" class="map-button" style="
+                                        display: inline-block;
+                                        padding: 10px 20px;
+                                        font-size: 16px;
+                                        background-color: #4CAF50;
+                                        text-align: center;
+                                        border: none;
+                                        border-radius: 5px;
+                                        cursor: pointer;
+                                        transition: all 0.2s ease;
+                                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                                    " onclick="window.top.location.href='{map_url}'; return false;">
+                                        🗺️ View Train Route on Interactive Map
+                                    </a>
+                                    """,
+                                    unsafe_allow_html=True
+                                )
                 
                 except Exception as e:
                     st.error(f"Error finding path: {e}")
