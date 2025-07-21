@@ -221,12 +221,6 @@ def main():
                     with st.expander(f"Step {i}: {step['step']}", expanded=False):
                         st.markdown(f"**Distance:** {step['distance']}")
                         st.markdown(f"**Time:** ~{step['time']}")
-                
-                # Map view button that updates session state
-                if stored['rail_paths']:
-                    if st.button("🗺️ View Train Route on Interactive Map", key="view_map_stored"):
-                        st.session_state.map_url = view_on_map(stored['rail_paths'])
-                        st.rerun()
             
             elif find_path:
                 if origin == destination:
@@ -337,6 +331,10 @@ def main():
                                     'path_found': True
                                 }
                                 
+                                # Automatically generate map URL if there are rail paths
+                                if rail_paths:
+                                    st.session_state.map_url = view_on_map(rail_paths)
+                                
                                 # Display route summary
                                 st.success(f"✅ Route found from **{origin_name}** to **{dest_name}**!")
                                 
@@ -353,12 +351,6 @@ def main():
                                     with st.expander(f"Step {i}: {step['step']}", expanded=False):
                                         st.markdown(f"**Distance:** {step['distance']}")
                                         st.markdown(f"**Time:** ~{step['time']}")
-                                
-                                # Map view button that updates session state
-                                if rail_paths:
-                                    if st.button("🗺️ View Train Route on Interactive Map", key="view_map_new"):
-                                        st.session_state.map_url = view_on_map(rail_paths)
-                                        st.rerun()
                     
                     except Exception as e:
                         st.error(f"Error finding path: {e}")
@@ -371,10 +363,10 @@ def main():
             # Clear any previous route results
             st.session_state.route_results = None
 
-    # Right column for the map iframe - ONLY show if we have route results or a map URL
+    # Right column for the map iframe - ONLY show if we have route results
     with right_col:
-        # Only show the Interactive Map section if we have route results or a map URL
-        if (st.session_state.route_results and st.session_state.route_results.get('path_found')) or st.session_state.map_url:
+        # Show the Interactive Map section if we have route results (whether or not map is loaded yet)
+        if st.session_state.route_results and st.session_state.route_results.get('path_found'):
             st.subheader("Interactive Map")
             
             if st.session_state.map_url:
@@ -395,7 +387,15 @@ def main():
                 st.markdown(f"[🔗 Open in full screen]({st.session_state.map_url})")
                 
             else:
-                st.info("🗺️ Click 'View Train Route on Interactive Map' after finding a route to display the map here.")
+                # Check if we have route results with rail paths but no map URL yet
+                if (st.session_state.route_results and 
+                    st.session_state.route_results.get('rail_paths') and 
+                    not st.session_state.map_url):
+                    # Auto-generate map URL for stored route results
+                    st.session_state.map_url = view_on_map(st.session_state.route_results['rail_paths'])
+                    st.rerun()
+                else:
+                    st.info("🗺️ Interactive map will appear here when a route with train connections is found.")
 
 if __name__ == "__main__":
     main()
