@@ -113,7 +113,7 @@ def view_on_map(rail_paths):
         return None
     
     # Use the embed URL format for Tableau Public
-    base_url = "https://public.tableau.com/views/MinecraftRealmsAioniaMapTest/AioniaWayfinder?Show%20Trains=1&"
+    base_url = "https://public.tableau.com/views/WayfinderEmbed/Wayfinder?Show%20Trains=1&"
     
     # Join paths with commas and encode only special characters (not commas)
     paths_param = ",".join(rail_paths)
