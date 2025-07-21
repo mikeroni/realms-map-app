@@ -225,7 +225,7 @@ def main():
                         text-decoration: none !important;
                     }}
                     </style>
-                    <a href="{map_url}" target="_self" class="map-button" style="
+                    <a href="{map_url}" target="_top" class="map-button" style="
                         display: inline-block;
                         padding: 10px 20px;
                         font-size: 16px;
@@ -380,7 +380,7 @@ def main():
                                         text-decoration: none !important;
                                     }}
                                     </style>
-                                    <a href="{map_url}" target="_self" class="map-button" style="
+                                    <a href="{map_url}" target="_top" class="map-button" style="
                                         display: inline-block;
                                         padding: 10px 20px;
                                         font-size: 16px;
