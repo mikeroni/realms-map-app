@@ -191,14 +191,27 @@ def main():
             help="Select your destination"
         )
     
-    # Button and Ice Highway toggle in a single row
-    col3, col4 = st.columns([1, 2])
+    # Button and Ice Highway toggle in a single row with custom styling
+    st.markdown("""
+    <style>
+    .button-checkbox-row {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     
-    with col3:
+    # Create a container for the button and checkbox
+    button_col, checkbox_col = st.columns([1, 3], gap="small")
+    
+    with button_col:
         # Find path button
         find_path = st.button("🔍 Find Shortest Path", type="primary")
     
-    with col4:
+    with checkbox_col:
         # Ice Highway toggle
         include_ice_highways = st.checkbox(
             "❄️ Include Ice Highway routes",
