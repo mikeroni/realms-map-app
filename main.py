@@ -164,253 +164,230 @@ def main():
     if 'route_results' not in st.session_state:
         st.session_state.route_results = None
     
-    # Mobile-friendly layout
-    st.subheader("Route Planning")
+    # Initialize map URL in session state
+    if 'map_url' not in st.session_state:
+        st.session_state.map_url = None
     
-    # Origin selection
-    origin = st.selectbox(
-        "🏠 Origin:",
-        options=[""] + st.session_state.locations,
-        index=0,
-        help="Select your starting location"
-    )
-
-    # Destination selection
-    destination = st.selectbox(
-        "🎯 Destination:",
-        options=[""] + st.session_state.locations,
-        index=0,
-        help="Select your destination"
-    )
+    # Create two columns for the main layout
+    left_col, right_col = st.columns([1, 1])
     
-    # Ice Highway toggle
-    include_ice_highways = st.checkbox(
-        "❄️ Include Ice Highway routes",
-        help="Enable this to include faster ice highway connections in pathfinding"
-    )
-    
-    # Find path button
-    find_path = st.button("🔍 Find Shortest Path", type="primary")
-
-    # Route Details section (now below planning on mobile)
-    if (find_path and origin and destination) or (st.session_state.route_results and st.session_state.route_results.get('path_found')):
-        st.subheader("Route Details")
+    with left_col:
+        # Mobile-friendly layout
+        st.subheader("Route Planning")
         
-        # If we have stored results and no new search, use stored results
-        if not find_path and st.session_state.route_results and st.session_state.route_results.get('path_found'):
-            # Display stored route results
-            stored = st.session_state.route_results
-            st.success(f"✅ Route from **{stored['origin_name']}** to **{stored['dest_name']}**!")
-            
-            col_time, col_dist = st.columns(2)
-            with col_time:
-                st.metric("🕐 Total Time", format_time(stored['total_time']))
-            with col_dist:
-                st.metric("📏 Total Distance", f"{stored['total_distance']:.0f} blocks")
-            
-            st.subheader("📋 Route Steps")
-            for i, step in enumerate(stored['route_steps'], 1):
-                with st.expander(f"Step {i}: {step['step']}", expanded=False):
-                    st.markdown(f"**Distance:** {step['distance']}")
-                    st.markdown(f"**Time:** ~{step['time']}")
-            
-            # Map view with stored rail paths
-            if stored['rail_paths']:
-                map_url = view_on_map(stored['rail_paths'])
-                st.markdown(
-                    f"""
-                    <style>
-                    .map-button {{
-                        color: white !important;
-                        text-decoration: none !important;
-                    }}
-                    </style>
-                    <a href="{map_url}" target="_top" class="map-button" style="
-                        display: inline-block;
-                        padding: 10px 20px;
-                        font-size: 16px;
-                        background-color: #4CAF50;
-                        text-align: center;
-                        border: none;
-                        border-radius: 5px;
-                        cursor: pointer;
-                        transition: all 0.2s ease;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                    " onclick="try {{ window.top.location.assign('{map_url}'); }} catch(e) {{ try {{ window.parent.location.assign('{map_url}'); }} catch(e2) {{ window.location.assign('{map_url}'); }} }} return false;">
-                        🗺️ View Train Route on Interactive Map
-                    </a>
-                    """,
-                    unsafe_allow_html=True
-                )
+        # Origin selection
+        origin = st.selectbox(
+            "🏠 Origin:",
+            options=[""] + st.session_state.locations,
+            index=0,
+            help="Select your starting location"
+        )
+
+        # Destination selection
+        destination = st.selectbox(
+            "🎯 Destination:",
+            options=[""] + st.session_state.locations,
+            index=0,
+            help="Select your destination"
+        )
         
-        elif find_path:
-            if origin == destination:
-                st.warning("Origin and destination cannot be the same!")
-            else:
-                # Extract location names (remove owner info if present)
-                def extract_location_name(display_name):
-                    if " (" in display_name and display_name.endswith(")"):
-                        return display_name.split(" (")[0]
-                    return display_name
+        # Ice Highway toggle
+        include_ice_highways = st.checkbox(
+            "❄️ Include Ice Highway routes",
+            help="Enable this to include faster ice highway connections in pathfinding"
+        )
+        
+        # Find path button
+        find_path = st.button("🔍 Find Shortest Path", type="primary")
+
+        # Route Details section (now below planning on mobile)
+        if (find_path and origin and destination) or (st.session_state.route_results and st.session_state.route_results.get('path_found')):
+            st.subheader("Route Details")
+            
+            # If we have stored results and no new search, use stored results
+            if not find_path and st.session_state.route_results and st.session_state.route_results.get('path_found'):
+                # Display stored route results
+                stored = st.session_state.route_results
+                st.success(f"✅ Route from **{stored['origin_name']}** to **{stored['dest_name']}**!")
                 
-                origin_name = extract_location_name(origin)
-                dest_name = extract_location_name(destination)
+                col_time, col_dist = st.columns(2)
+                with col_time:
+                    st.metric("🕐 Total Time", format_time(stored['total_time']))
+                with col_dist:
+                    st.metric("📏 Total Distance", f"{stored['total_distance']:.0f} blocks")
                 
-                try:
-                    # Rebuild graph with current settings
-                    graph, name_to_coord, owner_lookup, types_lookup, coord_pair_to_path = build_graph_from_excel(
-                        filepath, include_ice_highways=include_ice_highways
-                    )
-                    coord_to_name = {v: k for k, v in name_to_coord.items()}
+                st.subheader("📋 Route Steps")
+                for i, step in enumerate(stored['route_steps'], 1):
+                    with st.expander(f"Step {i}: {step['step']}", expanded=False):
+                        st.markdown(f"**Distance:** {step['distance']}")
+                        st.markdown(f"**Time:** ~{step['time']}")
+                
+                # Map view button that updates session state
+                if stored['rail_paths']:
+                    if st.button("🗺️ View Train Route on Interactive Map", key="view_map_stored"):
+                        st.session_state.map_url = view_on_map(stored['rail_paths'])
+            
+            elif find_path:
+                if origin == destination:
+                    st.warning("Origin and destination cannot be the same!")
+                else:
+                    # Extract location names (remove owner info if present)
+                    def extract_location_name(display_name):
+                        if " (" in display_name and display_name.endswith(")"):
+                            return display_name.split(" (")[0]
+                        return display_name
                     
-                    # More robust location matching
-                    if origin_name not in name_to_coord:
-                        # Try to find a match in the actual location names
-                        possible_matches = [loc for loc in name_to_coord.keys() if origin_name.lower() in loc.lower() or loc.lower() in origin_name.lower()]
-                        if possible_matches:
-                            origin_name = possible_matches[0]
-                        else:
-                            st.error(f"Could not find origin location: '{origin_name}'. Available locations: {list(name_to_coord.keys())[:5]}...")
-                            return
+                    origin_name = extract_location_name(origin)
+                    dest_name = extract_location_name(destination)
                     
-                    if dest_name not in name_to_coord:
-                        # Try to find a match in the actual location names
-                        possible_matches = [loc for loc in name_to_coord.keys() if dest_name.lower() in loc.lower() or loc.lower() in dest_name.lower()]
-                        if possible_matches:
-                            dest_name = possible_matches[0]
-                        else:
-                            st.error(f"Could not find destination location: '{dest_name}'. Available locations: {list(name_to_coord.keys())[:5]}...")
-                            return
-                    
-                    start = name_to_coord[origin_name]
-                    end = name_to_coord[dest_name]
-                    
-                    path = dijkstra(graph, start, end)
+                    try:
+                        # Rebuild graph with current settings
+                        graph, name_to_coord, owner_lookup, types_lookup, coord_pair_to_path = build_graph_from_excel(
+                            filepath, include_ice_highways=include_ice_highways
+                        )
+                        coord_to_name = {v: k for k, v in name_to_coord.items()}
                         
-                    if not path:
-                            st.error(f"No path found between '{origin_name}' and '{dest_name}'.")
-                            # Clear any previous route results
-                            st.session_state.route_results = None
-                    else:
-                            total_time = 0
-                            total_distance = 0
-                            route_steps = []
-                            rail_paths = []
+                        # More robust location matching
+                        if origin_name not in name_to_coord:
+                            # Try to find a match in the actual location names
+                            possible_matches = [loc for loc in name_to_coord.keys() if origin_name.lower() in loc.lower() or loc.lower() in origin_name.lower()]
+                            if possible_matches:
+                                origin_name = possible_matches[0]
+                            else:
+                                st.error(f"Could not find origin location: '{origin_name}'. Available locations: {list(name_to_coord.keys())[:5]}...")
+                                return
+                        
+                        if dest_name not in name_to_coord:
+                            # Try to find a match in the actual location names
+                            possible_matches = [loc for loc in name_to_coord.keys() if dest_name.lower() in loc.lower() or loc.lower() in dest_name.lower()]
+                            if possible_matches:
+                                dest_name = possible_matches[0]
+                            else:
+                                st.error(f"Could not find destination location: '{dest_name}'. Available locations: {list(name_to_coord.keys())[:5]}...")
+                                return
+                        
+                        start = name_to_coord[origin_name]
+                        end = name_to_coord[dest_name]
+                        
+                        path = dijkstra(graph, start, end)
                             
-                            # Process each segment
-                            for i in range(0, len(path) - 2, 2):
-                                if i + 2 >= len(path):
-                                    break
-                                (coord, _), (_, mode) = path[i], path[i + 1]
-                                next_coord, next_time = path[i + 2]
+                        if not path:
+                                st.error(f"No path found between '{origin_name}' and '{dest_name}'.")
+                                # Clear any previous route results
+                                st.session_state.route_results = None
+                        else:
+                                total_time = 0
+                                total_distance = 0
+                                route_steps = []
+                                rail_paths = []
                                 
-                                segment_time = next_time - path[i][1]
-                                speed = {"normal": 8, "ice": 72, "walk": 3}.get(mode, 1)
-                                distance = segment_time * speed
-                                total_time = next_time
-                                total_distance += distance
-                                
-                                current_name = coord_to_name.get(coord, str(coord))
-                                next_name = coord_to_name.get(next_coord, str(next_coord))
-                                next_owner = owner_lookup.get(next_name, "Unknown")
-                                
-                                # Store rail paths for map viewing
-                                if mode == "normal":
-                                    path_name = coord_pair_to_path.get((coord, next_coord))
-                                    if path_name:
-                                        rail_paths.append(path_name)
-                                
-                                # Format step description
-                                if mode == "walk":
-                                    if next_owner and next_owner != "Public Land" and next_owner.lower() not in next_name.lower():
-                                        step_desc = f"🚶 Walk to **{next_name}** ({next_owner}) `({next_coord[0]},{next_coord[1]})`"
-                                    else:
-                                        step_desc = f"🚶 Walk to **{next_name}** `({next_coord[0]},{next_coord[1]})`"
-                                else:
-                                    mode_icon = {"normal": "🚂", "ice": "🧊"}.get(mode, "🚀")
-                                    mode_name = {"normal": "Rail", "ice": "Ice Highway"}.get(mode, mode.title())
+                                # Process each segment
+                                for i in range(0, len(path) - 2, 2):
+                                    if i + 2 >= len(path):
+                                        break
+                                    (coord, _), (_, mode) = path[i], path[i + 1]
+                                    next_coord, next_time = path[i + 2]
                                     
-                                    if next_owner and next_owner != "Public Land" and next_owner.lower() not in next_name.lower():
-                                        step_desc = f"{mode_icon} {mode_name} to **{next_name}** ({next_owner})"
+                                    segment_time = next_time - path[i][1]
+                                    speed = {"normal": 8, "ice": 72, "walk": 3}.get(mode, 1)
+                                    distance = segment_time * speed
+                                    total_time = next_time
+                                    total_distance += distance
+                                    
+                                    current_name = coord_to_name.get(coord, str(coord))
+                                    next_name = coord_to_name.get(next_coord, str(next_coord))
+                                    next_owner = owner_lookup.get(next_name, "Unknown")
+                                    
+                                    # Store rail paths for map viewing
+                                    if mode == "normal":
+                                        path_name = coord_pair_to_path.get((coord, next_coord))
+                                        if path_name:
+                                            rail_paths.append(path_name)
+                                    
+                                    # Format step description
+                                    if mode == "walk":
+                                        if next_owner and next_owner != "Public Land" and next_owner.lower() not in next_name.lower():
+                                            step_desc = f"🚶 Walk to **{next_name}** ({next_owner}) `({next_coord[0]},{next_coord[1]})`"
+                                        else:
+                                            step_desc = f"🚶 Walk to **{next_name}** `({next_coord[0]},{next_coord[1]})`"
                                     else:
-                                        step_desc = f"{mode_icon} {mode_name} to **{next_name}**"
+                                        mode_icon = {"normal": "🚂", "ice": "🧊"}.get(mode, "🚀")
+                                        mode_name = {"normal": "Rail", "ice": "Ice Highway"}.get(mode, mode.title())
+                                        
+                                        if next_owner and next_owner != "Public Land" and next_owner.lower() not in next_name.lower():
+                                            step_desc = f"{mode_icon} {mode_name} to **{next_name}** ({next_owner})"
+                                        else:
+                                            step_desc = f"{mode_icon} {mode_name} to **{next_name}**"
+                                    
+                                    route_steps.append({
+                                        'step': step_desc,
+                                        'distance': f"{distance:.0f} blocks",
+                                        'time': format_time(segment_time)
+                                    })
                                 
-                                route_steps.append({
-                                    'step': step_desc,
-                                    'distance': f"{distance:.0f} blocks",
-                                    'time': format_time(segment_time)
-                                })
-                            
-                            # Store route results in session state to persist across reruns
-                            st.session_state.route_results = {
-                                'origin_name': origin_name,
-                                'dest_name': dest_name,
-                                'total_time': total_time,
-                                'total_distance': total_distance,
-                                'route_steps': route_steps,
-                                'rail_paths': rail_paths,
-                                'path_found': True
-                            }
-                            
-                            # Display route summary
-                            st.success(f"✅ Route found from **{origin_name}** to **{dest_name}**!")
-                            
-                            # Summary metrics
-                            col_time, col_dist = st.columns(2)
-                            with col_time:
-                                st.metric("🕐 Total Time", format_time(total_time))
-                            with col_dist:
-                                st.metric("📏 Total Distance", f"{total_distance:.0f} blocks")
-                            
-                            # Route steps
-                            st.subheader("📋 Route Steps")
-                            for i, step in enumerate(route_steps, 1):
-                                with st.expander(f"Step {i}: {step['step']}", expanded=False):
-                                    st.markdown(f"**Distance:** {step['distance']}")
-                                    st.markdown(f"**Time:** ~{step['time']}")
-                            
-                            # Map view button
-                            if rail_paths:
-                                map_url = view_on_map(rail_paths)
-                                st.markdown(
-                                    f"""
-                                    <style>
-                                    .map-button {{
-                                        color: white !important;
-                                        text-decoration: none !important;
-                                    }}
-                                    </style>
-                                    <a href="{map_url}" target="_top" class="map-button" style="
-                                        display: inline-block;
-                                        padding: 10px 20px;
-                                        font-size: 16px;
-                                        background-color: #4CAF50;
-                                        text-align: center;
-                                        border: none;
-                                        border-radius: 5px;
-                                        cursor: pointer;
-                                        transition: all 0.2s ease;
-                                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                                    " onclick="try {{ window.top.location.assign('{map_url}'); }} catch(e) {{ try {{ window.parent.location.assign('{map_url}'); }} catch(e2) {{ window.location.assign('{map_url}'); }} }} return false;">
-                                        🗺️ View Train Route on Interactive Map
-                                    </a>
-                                    """,
-                                    unsafe_allow_html=True
-                                )
-                
-                except Exception as e:
-                    st.error(f"Error finding path: {e}")
-                    # Clear any previous route results on error
-                    st.session_state.route_results = None
+                                # Store route results in session state to persist across reruns
+                                st.session_state.route_results = {
+                                    'origin_name': origin_name,
+                                    'dest_name': dest_name,
+                                    'total_time': total_time,
+                                    'total_distance': total_distance,
+                                    'route_steps': route_steps,
+                                    'rail_paths': rail_paths,
+                                    'path_found': True
+                                }
+                                
+                                # Display route summary
+                                st.success(f"✅ Route found from **{origin_name}** to **{dest_name}**!")
+                                
+                                # Summary metrics
+                                col_time, col_dist = st.columns(2)
+                                with col_time:
+                                    st.metric("🕐 Total Time", format_time(total_time))
+                                with col_dist:
+                                    st.metric("📏 Total Distance", f"{total_distance:.0f} blocks")
+                                
+                                # Route steps
+                                st.subheader("📋 Route Steps")
+                                for i, step in enumerate(route_steps, 1):
+                                    with st.expander(f"Step {i}: {step['step']}", expanded=False):
+                                        st.markdown(f"**Distance:** {step['distance']}")
+                                        st.markdown(f"**Time:** ~{step['time']}")
+                                
+                                # Map view button that updates session state
+                                if rail_paths:
+                                    if st.button("🗺️ View Train Route on Interactive Map", key="view_map_new"):
+                                        st.session_state.map_url = view_on_map(rail_paths)
+                    
+                    except Exception as e:
+                        st.error(f"Error finding path: {e}")
+                        # Clear any previous route results on error
+                        st.session_state.route_results = None
 
-    elif find_path:
-        st.subheader("Route Details")
-        st.warning("Please select both origin and destination.")
-        # Clear any previous route results
-        st.session_state.route_results = None
+        elif find_path:
+            st.subheader("Route Details")
+            st.warning("Please select both origin and destination.")
+            # Clear any previous route results
+            st.session_state.route_results = None
 
-
-    
+    # Right column for the map iframe
+    with right_col:
+        st.subheader("Interactive Map")
+        
+        if st.session_state.map_url:
+            # Display the map in an iframe
+            components.iframe(
+                st.session_state.map_url,
+                width=None,  # Use full width of the column
+                height=600,
+                scrolling=True
+            )
+            
+            # Add a button to clear the map
+            if st.button("❌ Clear Map", key="clear_map"):
+                st.session_state.map_url = None
+                st.rerun()
+        else:
+            st.info("🗺️ Click 'View Train Route on Interactive Map' after finding a route to display the map here.")
 
 if __name__ == "__main__":
     main()
