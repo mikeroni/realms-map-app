@@ -1,0 +1,70 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Route Finder</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; }
+    label { display: block; margin-top: 10px; }
+    select, button { width: 100%; padding: 8px; margin-top: 5px; }
+    #result { margin-top: 20px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>Route Finder</h2>
+
+  <label for="start">Start Location:</label>
+  <select id="start"></select>
+
+  <label for="end">End Location:</label>
+  <select id="end"></select>
+
+  <label><input type="checkbox" id="iceToggle"> Include Ice Highways</label>
+
+  <button onclick="runPathfinding()">Find Route</button>
+
+  <div id="result"></div>
+
+  <script src="app.js"></script>
+  <script>
+    let globalData = [];
+    let globalGraph = {};
+    let globalCoords = {};
+
+    d3.csv("realms_data.csv").then(data => {
+      globalData = data;
+      populateDropdowns(data);
+    });
+
+    function populateDropdowns(data) {
+      const uniqueLocations = Array.from(new Set(data.map(row => row.Location))).sort();
+      const startSel = document.getElementById("start");
+      const endSel = document.getElementById("end");
+      uniqueLocations.forEach(loc => {
+        const opt1 = new Option(loc, loc);
+        const opt2 = new Option(loc, loc);
+        startSel.add(opt1);
+        endSel.add(opt2);
+      });
+    }
+
+    function runPathfinding() {
+      const start = document.getElementById("start").value;
+      const end = document.getElementById("end").value;
+      const includeIce = document.getElementById("iceToggle").checked;
+
+      const { graph } = buildGraph(globalData, includeIce);
+      const result = findShortestPath(graph, start, end);
+
+      const resultDiv = document.getElementById("result");
+      if (result.path.length > 0) {
+        resultDiv.innerHTML = `Path: ${result.path.join(" ➜ ")}<br>Total Distance: ${result.total.toFixed(2)} units`;
+      } else {
+        resultDiv.innerHTML = "No path found.";
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+Origin/Destination,Path,Location,X,Z,Type,Owner
+Destination,Tortuga to AB1,Abandoned Base 1 (McHatin/David),-70,-1690,Abandoned Base,Unowned
+Origin,AB1 to Alex688,Abandoned Base 1 (McHatin/David),-70,-1690,Abandoned Base,Unowned
+Origin,AB1 to AB2,Abandoned Base 1 (McHatin/David),-70,-1690,Abandoned Base,Unowned
+Destination,AB1 to AB2,Abandoned Base 2 (Peterson),1020,-1700,Abandoned Base,Unowned
+Origin,,Abandoned Base 3 ,945,-1240,Abandoned Base,Unowned
+Destination,AB1 to Alex688,Alex688's Base,-1200,-1655,Base,Alex688
+Origin,,Argos,1645,-1240,Base,SKULLBR3KER & Shift
+Origin,,CaveFather's Base,790,475,Base,CaveFather
+Destination,Dorne to C IHS,Central IHS,0,25,Ice Highway,Public Land
+Destination,Comm to C IHS,Central IHS,0,25,Ice Highway,Public Land
+Origin,C IHS to Fortune,Central IHS,0,25,Ice Highway,Public Land
+Origin,,Colosseum,5,195,Combat Area,Public Land
+Destination,Dorne to Comm,Community Base,-215,355,Community Base,Public Land
+Origin,Comm to Mikeroni,Community Base,-215,355,Community Base,Public Land
+Origin,Comm to C IHS,Community Base,-215,355,Community Base,Public Land
+Origin,Comm to Weens,Community Base,-215,355,Community Base,Public Land
+Origin,Comm to Tortuga,Community Base,-215,355,Community Base,Public Land
+Origin,Dorne to Comm,Dorne,75,355,Base,SilvaSpooner
+Origin,Dorne to Scho,Dorne,75,355,Base,SilvaSpooner
+Origin,Dorne to C IHS,Dorne,75,355,Base,SilvaSpooner
+Origin,Dorne to Odessa,Dorne,75,355,Base,SilvaSpooner
+Origin,,Eastern IHS,2048,0,Ice Highway,Public Land
+Destination,Scho to Xposed,Fjolkyngi,145,1330,Base,Xposed
+Destination,PJ to Xposed,Fjolkyngi,145,1330,Base,Xposed
+Destination,C IHS to Fortune,Fortune,205,-350,Base,McHatin
+Origin,Fortune to Tortuga,Fortune,205,-350,Base,McHatin
+Origin,Fortune to Petrichor,Fortune,205,-350,Base,McHatin
+Destination,Petrichor to Galini,Galini,1395,-875,Base,AllergicSpark
+Origin,Galini to SirPres,Galini,1395,-875,Base,AllergicSpark
+Destination,Scho to Fo & AJ,Gr8pist & AppleJax Base,-200,720,Base,Gr8pist & AppleJax
+Origin,Fo & AJ to Nick,Gr8pist & AppleJax Base,-200,720,Base,Gr8pist & AppleJax
+Origin,,Guardian Farm,680,-1821,Community Farm,Public Land
+Destination,Comm to Mikeroni,Mikeroni's Base,220,50,Base,MikeroniNCheese
+Origin,,Mob Farm,1521,-1137,Community Farm,Public Asset (Argos)
+Destination,Fo & AJ to Nick,Nick's Base,-230,965,Base,NickLyne
+Origin,Nick to PJ,Nick's Base,-230,965,Base,NickLyne
+Origin,,Northern IHS,0,-2048,Ice Highway,Public Land
+Destination,Dorne to Odessa,Odessa,435,320,Base,Captin Jesus
+Destination,Scho to Odoyle,Odoyle's Base,1620,1580,Base,Odoyle
+Destination,Dorne to Scho,OhNoItsScho's Base,115,755,Base,OhNoItsScho
+Origin,Scho to Odoyle,OhNoItsScho's Base,115,755,Base,OhNoItsScho
+Origin,Scho to Xposed,OhNoItsScho's Base,115,755,Base,OhNoItsScho
+Origin,Scho to Fo & AJ,OhNoItsScho's Base,115,755,Base,OhNoItsScho
+Destination,Fortune to Petrichor,Petrichor,775,-615,Base,T-Whip
+Origin,Petrichor to Galini,Petrichor,775,-615,Base,T-Whip
+Origin,Petrichor to SirPres,Petrichor,775,-615,Base,T-Whip
+Destination,Petrichor to SirPres,Pr3sidentSir's Base,1230,-245,Base,Pr3sidentSir
+Destination,Galini to SirPres,Pr3sidentSir's Base,1230,-245,Base,Pr3sidentSir
+Origin,,Slime Farm,1655,-1137,Community Farm,Public Asset (Argos)
+Destination,Nick to PJ,Sn4tch's Base,-180,1490,Base,Sn4tch
+Origin,PJ to Xposed,Sn4tch's Base,-180,1490,Base,Sn4tch
+Origin,,Southern IHS,0,2048,Ice Highway,Public Land
+Origin,,Supamaorifella's Base,-1290,110,Base,Supamaorifella
+Origin,,Stonehenge,350,-1495,World Wonder,Public Land
+Destination,Comm to Tortuga,Tortuga,-300,-275,Base,RNixon
+Destination,Fortune to Tortuga,Tortuga,-300,-275,Base,RNixon
+Origin,Tortuga to AB1,Tortuga,-300,-275,Base,RNixon
+Destination,Comm to Weens,Weens' Base,35,-70,Base,Weens
+Origin,,Western IHS,-2048,0,Ice Highway,Public Land
+Origin,,Quarry,-510,160,Community Farm,Public Land
+Origin,,Villager Trading Hall,165,355,Trading Hall,SilvaSpooner
+Origin,,End Portal 1 (Activated),215,142,End Portal,Public Asset (Mikeroni's Land)
+Origin,,End Portal 2 (Unactivated),46,795,End Portal,Public Asset (Scho's Land)
+Origin,,Ice Farm,5,-2068,Community Farm,Public Land
