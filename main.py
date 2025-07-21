@@ -214,7 +214,7 @@ def main():
                     st.markdown(f"**Distance:** {step['distance']}")
                     st.markdown(f"**Time:** ~{step['time']}")
             
-            # Map view with stored rail paths - using parent window navigation
+  # Map view with stored rail paths - using parent window navigation
             if stored['rail_paths']:
                 map_url = view_on_map(stored['rail_paths'])
                 st.markdown(
@@ -236,7 +236,7 @@ def main():
                         cursor: pointer;
                         transition: all 0.2s ease;
                         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                    " onclick="window.top.location.href='{map_url}'; return false;">
+                    " onclick="try {{ window.top.location.assign('{map_url}'); }} catch(e) {{ try {{ window.parent.location.assign('{map_url}'); }} catch(e2) {{ window.location.assign('{map_url}'); }} }} return false;">
                         🗺️ View Train Route on Interactive Map
                     </a>
                     """,
