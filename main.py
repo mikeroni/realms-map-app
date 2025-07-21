@@ -121,7 +121,7 @@ def view_on_map(rail_paths):
     encoded_paths = urllib.parse.quote(paths_param, safe=',')
     
     # Construct the full URL with embed parameters
-    full_url = f"{base_url}Path={encoded_paths}&:embed=yes&:showVizHome=no&:host_url=https%3A%2F%2Fpublic.tableau.com%2F&:embed_code_version=3&:tabs=no&:toolbar=yes&:showAppBanner=false&:display_spinner=no"
+    full_url = f"{base_url}Path={encoded_paths}&:embed=yes&:showVizHome=no&:host_url=https%3A%2F%2Fpublic.tableau.com%2F&:embed_code_version=3&:tabs=no&:toolbar=no&:showAppBanner=false&:display_spinner=no"
     
     return full_url
 
@@ -371,29 +371,31 @@ def main():
             # Clear any previous route results
             st.session_state.route_results = None
 
-    # Right column for the map iframe
+    # Right column for the map iframe - ONLY show if we have route results or a map URL
     with right_col:
-        st.subheader("Interactive Map")
-        
-        if st.session_state.map_url:
-            # Display the map in an iframe with proper Tableau embedding
-            components.iframe(
-                st.session_state.map_url,
-                width=None,  # Use full width of the column
-                height=700,
-                scrolling=False
-            )
+        # Only show the Interactive Map section if we have route results or a map URL
+        if (st.session_state.route_results and st.session_state.route_results.get('path_found')) or st.session_state.map_url:
+            st.subheader("Interactive Map")
             
-            # Add a button to clear the map
-            if st.button("❌ Clear Map", key="clear_map"):
-                st.session_state.map_url = None
-                st.rerun()
+            if st.session_state.map_url:
+                # Display the map in an iframe with proper Tableau embedding
+                components.iframe(
+                    st.session_state.map_url,
+                    width=None,  # Use full width of the column
+                    height=700,
+                    scrolling=False
+                )
                 
-            # Fallback link in case iframe doesn't work
-            st.markdown(f"[🔗 Open in full screen]({st.session_state.map_url})")
-            
-        else:
-            st.info("🗺️ Click 'View Train Route on Interactive Map' after finding a route to display the map here.")
+                # Add a button to clear the map
+                if st.button("❌ Clear Map", key="clear_map"):
+                    st.session_state.map_url = None
+                    st.rerun()
+                    
+                # Fallback link in case iframe doesn't work
+                st.markdown(f"[🔗 Open in full screen]({st.session_state.map_url})")
+                
+            else:
+                st.info("🗺️ Click 'View Train Route on Interactive Map' after finding a route to display the map here.")
 
 if __name__ == "__main__":
     main()
