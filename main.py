@@ -378,11 +378,6 @@ def main():
                     scrolling=False
                 )
                 
-                # Add a button to clear the map
-                if st.button("❌ Clear Map", key="clear_map"):
-                    st.session_state.map_url = None
-                    st.rerun()
-                    
                 # Fallback link in case iframe doesn't work
                 st.markdown(f"[🔗 Open in full screen]({st.session_state.map_url})")
                 
