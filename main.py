@@ -167,39 +167,40 @@ def main():
     if 'map_url' not in st.session_state:
         st.session_state.map_url = None
     
-    # Create two columns for the main layout
+    # Route Planning section (above columns)
+    st.subheader("Route Planning")
+    
+    # Origin selection
+    origin = st.selectbox(
+        "🏠 Origin:",
+        options=[""] + st.session_state.locations,
+        index=0,
+        help="Select your starting location"
+    )
+
+    # Destination selection
+    destination = st.selectbox(
+        "🎯 Destination:",
+        options=[""] + st.session_state.locations,
+        index=0,
+        help="Select your destination"
+    )
+    
+    # Ice Highway toggle
+    include_ice_highways = st.checkbox(
+        "❄️ Include Ice Highway routes",
+        help="Enable this to include faster ice highway connections in pathfinding"
+    )
+    
+    # Find path button
+    find_path = st.button("🔍 Find Shortest Path", type="primary")
+    
+    # Create two columns for the results layout
     left_col, right_col = st.columns([1, 1])
     
     with left_col:
-        # Mobile-friendly layout
-        st.subheader("Route Planning")
-        
-        # Origin selection
-        origin = st.selectbox(
-            "🏠 Origin:",
-            options=[""] + st.session_state.locations,
-            index=0,
-            help="Select your starting location"
-        )
 
-        # Destination selection
-        destination = st.selectbox(
-            "🎯 Destination:",
-            options=[""] + st.session_state.locations,
-            index=0,
-            help="Select your destination"
-        )
-        
-        # Ice Highway toggle
-        include_ice_highways = st.checkbox(
-            "❄️ Include Ice Highway routes",
-            help="Enable this to include faster ice highway connections in pathfinding"
-        )
-        
-        # Find path button
-        find_path = st.button("🔍 Find Shortest Path", type="primary")
-
-        # Route Details section (now below planning on mobile)
+        # Route Details section
         if (find_path and origin and destination) or (st.session_state.route_results and st.session_state.route_results.get('path_found')):
             st.subheader("Route Details")
             
@@ -225,6 +226,7 @@ def main():
                 if stored['rail_paths']:
                     if st.button("🗺️ View Train Route on Interactive Map", key="view_map_stored"):
                         st.session_state.map_url = view_on_map(stored['rail_paths'])
+                        st.rerun()
             
             elif find_path:
                 if origin == destination:
@@ -356,6 +358,7 @@ def main():
                                 if rail_paths:
                                     if st.button("🗺️ View Train Route on Interactive Map", key="view_map_new"):
                                         st.session_state.map_url = view_on_map(rail_paths)
+                                        st.rerun()
                     
                     except Exception as e:
                         st.error(f"Error finding path: {e}")
