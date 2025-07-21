@@ -167,56 +167,71 @@ def main():
     if 'map_url' not in st.session_state:
         st.session_state.map_url = None
     
-    # Route Planning section (above columns)
-    st.subheader("Route Planning")
-    
-    # Origin and Destination in two columns
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Origin selection
-        origin = st.selectbox(
-            "🏠 Origin:",
-            options=[""] + st.session_state.locations,
-            index=0,
-            help="Select your starting location"
-        )
-    
-    with col2:
-        # Destination selection
-        destination = st.selectbox(
-            "🎯 Destination:",
-            options=[""] + st.session_state.locations,
-            index=0,
-            help="Select your destination"
-        )
-    
-    # Button and Ice Highway toggle in a single row with custom styling
+    # Custom CSS for compact spacing
     st.markdown("""
     <style>
-    .button-checkbox-row {
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 20px;
-        margin-bottom: 20px;
+    .compact-section .stSelectbox {
+        margin-bottom: 10px !important;
+    }
+    .compact-controls {
+        margin-top: -10px !important;
+        margin-bottom: 10px !important;
+    }
+    .compact-controls .stButton {
+        margin-right: 15px !important;
+    }
+    .compact-controls .stCheckbox {
+        margin-top: 5px !important;
+        margin-left: 5px !important;
     }
     </style>
     """, unsafe_allow_html=True)
     
-    # Create a container for the button and checkbox
-    button_col, checkbox_col = st.columns([1, 3], gap="small")
+    # Route Planning section (above columns) with compact styling
+    st.subheader("Route Planning")
     
-    with button_col:
-        # Find path button
-        find_path = st.button("🔍 Find Shortest Path", type="primary")
-    
-    with checkbox_col:
-        # Ice Highway toggle
-        include_ice_highways = st.checkbox(
-            "❄️ Include Ice Highway routes",
-            help="Enable this to include faster ice highway connections in pathfinding"
-        )
+    # Wrap the section in a container with compact class
+    with st.container():
+        st.markdown('<div class="compact-section">', unsafe_allow_html=True)
+        
+        # Origin and Destination in two columns
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Origin selection
+            origin = st.selectbox(
+                "🏠 Origin:",
+                options=[""] + st.session_state.locations,
+                index=0,
+                help="Select your starting location"
+            )
+        
+        with col2:
+            # Destination selection
+            destination = st.selectbox(
+                "🎯 Destination:",
+                options=[""] + st.session_state.locations,
+                index=0,
+                help="Select your destination"
+            )
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Button and Ice Highway toggle in a compact row
+        st.markdown('<div class="compact-controls">', unsafe_allow_html=True)
+        button_col, checkbox_col = st.columns([2, 3])
+        
+        with button_col:
+            # Find path button
+            find_path = st.button("🔍 Find Shortest Path", type="primary")
+        
+        with checkbox_col:
+            # Ice Highway toggle
+            include_ice_highways = st.checkbox(
+                "❄️ Include Ice Highway routes",
+                help="Enable this to include faster ice highway connections in pathfinding"
+            )
+        st.markdown('</div>', unsafe_allow_html=True)
     
     # Create two columns for the results layout
     left_col, right_col = st.columns([1, 1])
