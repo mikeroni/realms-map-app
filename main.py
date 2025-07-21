@@ -170,30 +170,40 @@ def main():
     # Route Planning section (above columns)
     st.subheader("Route Planning")
     
-    # Origin selection
-    origin = st.selectbox(
-        "🏠 Origin:",
-        options=[""] + st.session_state.locations,
-        index=0,
-        help="Select your starting location"
-    )
-
-    # Destination selection
-    destination = st.selectbox(
-        "🎯 Destination:",
-        options=[""] + st.session_state.locations,
-        index=0,
-        help="Select your destination"
-    )
+    # Origin and Destination in two columns
+    col1, col2 = st.columns(2)
     
-    # Ice Highway toggle
-    include_ice_highways = st.checkbox(
-        "❄️ Include Ice Highway routes",
-        help="Enable this to include faster ice highway connections in pathfinding"
-    )
+    with col1:
+        # Origin selection
+        origin = st.selectbox(
+            "🏠 Origin:",
+            options=[""] + st.session_state.locations,
+            index=0,
+            help="Select your starting location"
+        )
     
-    # Find path button
-    find_path = st.button("🔍 Find Shortest Path", type="primary")
+    with col2:
+        # Destination selection
+        destination = st.selectbox(
+            "🎯 Destination:",
+            options=[""] + st.session_state.locations,
+            index=0,
+            help="Select your destination"
+        )
+    
+    # Button and Ice Highway toggle in a single row
+    col3, col4 = st.columns([1, 2])
+    
+    with col3:
+        # Find path button
+        find_path = st.button("🔍 Find Shortest Path", type="primary")
+    
+    with col4:
+        # Ice Highway toggle
+        include_ice_highways = st.checkbox(
+            "❄️ Include Ice Highway routes",
+            help="Enable this to include faster ice highway connections in pathfinding"
+        )
     
     # Create two columns for the results layout
     left_col, right_col = st.columns([1, 1])
