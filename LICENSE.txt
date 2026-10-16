@@ -1,0 +1,204 @@
+Realms Noncommercial ShareAlike License 1.0
+
+Original project: https://github.com/mikeroni/realms-map-app
+Original author: Michael Manning
+Copyright (c) 2025-2026 Michael Manning and other identified contributors,
+each for their own copyrightable contributions.
+
+1. What this license covers
+
+"Covered Material" means the original code, documentation, and other
+copyrightable material expressly offered under this license by a person
+entitled to license it. In this project, that includes original application
+code, the Google Sheets sidebar, publishing tools, tests, documentation, and
+the archived browser prototype, to the extent those rights are held by the
+licensors. Original data selection, arrangement, and artwork are included
+only to the extent a licensor holds and offers the relevant rights.
+
+"Licensor" means each copyright holder who offers their contribution under
+this license. Each Licensor grants rights only to their own contribution.
+
+"Derivative" means an adaptation or modification of Covered Material, or
+a larger work incorporating it, to the extent that creating or sharing that
+work requires permission from a Licensor under copyright law. It does not
+include an independently created work merely using the same ideas, methods,
+interfaces, or unprotected facts. Separate dependencies, programs, or data
+do not become Derivatives just because they are used alongside the project,
+communicate with it, or appear in the same distribution.
+
+"You" means the person or entity exercising rights under this license.
+
+Third-party components and services, including Python packages, D3, GitHub
+Actions, Minecraft assets and marks, and Tableau and Google services, are
+not relicensed here. Their applicable licenses and service terms remain
+separate. Material marked with another license keeps that license.
+Unprotected facts, coordinates, and ideas are not made exclusive by this
+license. This license cannot grant rights that a Licensor does not hold.
+
+2. Permission
+
+Subject to these conditions, each Licensor gives You worldwide,
+nonexclusive, royalty-free permission under their copyright to use, run,
+study, copy, modify, display, and distribute their Covered Material and
+Derivatives for the noncommercial purposes described in section 3.
+
+These grants last for the duration of the licensed rights unless terminated
+under section 9. They cannot be withdrawn from a compliant recipient merely
+because a Licensor later changes the project's license or stops publishing
+it. No permission is granted for uses outside these terms unless separately
+agreed by the relevant rights holders.
+
+3. Noncommercial use and the portfolio exception
+
+Permitted purposes include personal learning, noncommercial research and
+teaching, hobby projects, and freely available community tools, where the
+Covered Material or Derivative is not used to earn revenue, deliver paid
+work, or operate or promote a commercial product or service.
+
+Commercial uses requiring separate permission include selling copies,
+charging for access or features, incorporating the project into a paid
+product, using it in paid client work or a business's internal operations,
+and monetizing its operation through advertising, sponsorship, or affiliate
+revenue. Offering the project as a free feature of a commercial product or
+service does not avoid this restriction. The activity matters, not whether
+the operator is an individual, company, or nonprofit.
+
+As an express exception, an individual may show an honestly attributed
+personal learning project or Derivative in their portfolio, including when
+seeking employment or freelance work. This permits demonstrating their
+skills; it does not permit supplying the Covered Material or Derivative
+as paid work, selling access to it, or claiming others' work as their own.
+An employer or prospective client may inspect such a portfolio for
+evaluation, but receives no permission for commercial deployment from it.
+
+Paying an ordinary hosting provider to run an otherwise permitted project
+does not by itself make that project commercial. You may authorize such a
+provider to copy and run the necessary Covered Material solely on Your
+behalf to host that permitted project, including for ordinary hosting fees.
+This limited permission does not authorize the provider to sell or reuse
+the Covered Material as its own product or for another customer's project.
+
+Voluntary contributions solely to reimburse documented direct hosting
+costs are permitted if they
+confer no preferential access, features, advertising, or services and do
+not exceed those costs. Other donations or sponsorship require permission.
+These exceptions do not license unrelated commercial exploitation by a
+hosting provider or another third party.
+
+4. Credit and notices
+
+When You distribute Covered Material or a Derivative, retain the applicable
+copyright notices, author credits, third-party notices, this license, and
+its warranty disclaimer. Include a link to the original project where
+reasonably practicable. Clearly identify material changes and their author;
+a changelog or version history is sufficient. You may add accurate credit
+for Your own contributions but must not remove earlier applicable credit.
+
+For a hosted or interactive version, provide reasonably accessible credit
+and links to the license and required source, for example in an About,
+Help, or footer area. Credit need not appear on every screen.
+
+5. ShareAlike and source availability
+
+If You distribute a Derivative or let others use a hosted Derivative,
+You must offer Your contributions to that Derivative under this exact
+license, version 1.0, and include its full text. Retaining this license
+only on the original files is not sufficient if Your changes to those
+files or other copyrightable parts of the
+Derivative are offered only under different terms. Do not impose additional
+legal or technical restrictions that prevent recipients from exercising
+these permissions on the Covered Material and Derivative.
+
+Every recipient receives the permissions in this license directly from
+each Licensor for that Licensor's contribution. You may not replace those
+permissions with a sublicense that removes the noncommercial or ShareAlike
+conditions. Independent third-party components remain under their own
+licenses; do not combine components into a Derivative if their applicable
+terms cannot be satisfied together.
+
+When You distribute Covered Material or a Derivative in executable,
+compiled, bundled, or otherwise noneditable form, give each recipient
+access to the complete corresponding source at no charge. This means the
+preferred editable form, including modifications and the project-specific
+scripts, dependency information, and instructions reasonably needed to
+build and run that version. An accessible link accompanying the release
+is sufficient, provided the source is actually available for that release
+and remains available for as long as You offer the release.
+
+If You let other people use a hosted version, whether modified or not,
+offer those users the same source access while that version is available.
+A link to the upstream source is sufficient only when it corresponds to
+the version You actually run, including any modifications. Sharing source
+with the users or recipients is required; publishing it to everyone on the
+internet is not required. Each recipient may redistribute it under this
+license.
+
+You need not publish private modifications that You neither distribute
+nor host for others. Corresponding source does not require passwords,
+tokens, private user data, or independent operational datasets. Provide
+safe configuration examples or synthetic sample data where needed instead.
+Do not label actual program code as configuration or data to evade source
+sharing. Ordinary third-party tools and dependencies may be identified
+with versions and obtaining instructions instead of copied into the source,
+subject to their own license requirements.
+
+6. Patent permission
+
+For permitted uses, each Licensor grants a worldwide, nonexclusive,
+royalty-free patent license limited to claims they can license that are
+necessarily infringed by their contribution, alone or as incorporated in
+the project version in which they offered it. This does not cover claims
+infringed only by other modifications or combinations. If You bring a
+patent infringement claim alleging that the Covered Material infringes
+Your patents, the patent permissions You receive under this license end.
+
+7. Names and other rights
+
+This license grants no trademark, publicity, privacy, or endorsement
+rights. You may identify the original author and project for attribution,
+but may not imply that a fork is official or endorsed without permission.
+You may give a Derivative its own name while keeping required credit.
+
+Rights available independently under applicable law, including fair use,
+fair dealing, and other exceptions, are not restricted by this license.
+Separate permissions, such as rights GitHub provides for viewing and
+forking public repositories, are not withdrawn by this license.
+
+8. Contributions and separate commercial permission
+
+Contributors keep ownership of their contributions. Offering a
+contribution under this license does not transfer ownership or give the
+maintainer an unrestricted right to relicense it. A different or commercial
+license requires permission from all relevant rights holders for the
+material used, not merely the repository owner when others own parts.
+
+For permission concerning Michael Manning's contributions, contact
+mikemanning1223@gmail.com. No commercial or alternative license is implied
+by discussion, attribution, or availability of the source.
+
+9. Noncompliance
+
+If You fail to comply, the permissions granted to You under this license
+terminate. For a first violation, they are automatically reinstated if You
+fully correct the violation within 30 days after becoming aware of it.
+For other violations or a missed deadline, reinstatement requires express
+permission from the affected Licensor. Reinstatement does not by itself
+resolve liability for an earlier violation. Compliant downstream recipients
+do not lose their own permissions merely because Your permissions end.
+
+10. Warranty and liability
+
+To the extent applicable law permits, the Covered Material is provided
+without warranties, including warranties of accuracy, fitness for a
+particular purpose, merchantability, title, or noninfringement. Each
+Licensor disclaims liability for losses arising from use of the Covered
+Material or these terms. This does not exclude liability or statutory
+rights that applicable law does not allow to be excluded.
+
+11. Interpretation
+
+These permissions apply only within the rights a Licensor can grant.
+If a provision is unenforceable, it should be limited only as necessary
+under applicable law; remaining provisions continue where legally possible.
+A plain-English summary does not replace or broaden this license. No
+later license version automatically replaces this version for a recipient.

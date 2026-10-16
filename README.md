@@ -128,3 +128,26 @@ python -m streamlit run main.py --server.address 0.0.0.0 --server.port "$PORT" -
 ```
 
 Use the Python version tested in CI. Confirm the existing service's branch, build command, start command, and Python version before changing its configuration. No Render configuration or deployed branch is managed by this repository cleanup. Review and merge changes before deploying them.
+
+## License
+
+You are welcome to study this project, use it for noncommercial hobby and
+learning projects, and share your own versions. Keep the original credit,
+identify your changes, and release shared derivatives under the same terms.
+If you distribute or host a version for others, give those users access to
+the matching editable source. Private experiments do not need to be published.
+
+Personal portfolio demonstrations are allowed, including when seeking work.
+Commercial products, paid client work, business use, and monetized services
+require separate permission. Friends may voluntarily share actual hosting
+costs under the limits in the license.
+
+The original project material is source-available under the custom
+[Realms Noncommercial ShareAlike License 1.0](LICENSE.txt), not an
+OSI-approved open-source license. This summary does not replace the license.
+Third-party libraries, services, assets, and independently licensed material
+retain their own terms.
+
+For permission concerning Michael Manning's contributions, contact
+mikemanning1223@gmail.com. Contributions by others may require their
+permission too.
