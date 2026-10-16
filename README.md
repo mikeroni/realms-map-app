@@ -68,7 +68,13 @@ After editing the workbook, run the tests below and verify representative routes
 
 `archive/browser-prototype/realms_data.csv` belongs to the earlier browser prototype and is not read by the Python app. It is not automatically synchronized with the workbook.
 
-Excel and the manually published Tableau workbook remain the network's source of truth. The route controls do not add connections, rename paths, or generate new Tableau geometry. Shared journeys still pass only the existing rail path names to the map.
+The maintained Google Sheet is the authoring source; the bundled Excel file is the Python app's published export. Shared journeys pass the exact existing rail path names to Tableau, so publish the same approved data to both consumers.
+
+### Google Sheets editor and publishing
+
+The optional [Sheets sidebar](apps-script/README.md) adds master locations and Overworld rail connections inside the **existing Google spreadsheet**. It preserves the spreadsheet URL, connected tabs, column headings, and existing path names. There is no public write endpoint and the Streamlit app receives no Google credentials.
+
+Its publishing flow prepares a snapshot, asks you to verify Tableau's refresh, and approves that exact data for GitHub. The `Publish approved Sheet data` workflow validates and tests the Excel export before committing it. Owner setup is required; hourly polling is disabled unless the repository variable `SHEET_SYNC_ENABLED` is explicitly enabled. Installation, Google authentication, and the Tableau/Render deployment round must be verified before live use.
 
 ## Project layout
 
@@ -87,6 +93,9 @@ tests/
 Realms Map Dataset.xlsx     Maintained Python application data
 requirements.txt           Runtime dependency versions
 requirements-dev.txt       Runtime and development dependencies
+requirements-sync.txt      Optional authenticated publishing dependencies
+apps-script/               Bound Google Sheets sidebar and installation guide
+tools/                     Approved-export sync and synthetic sidebar preview
 pyproject.toml             Lint and formatting configuration
 archive/browser-prototype/ Earlier HTML/JavaScript version and its CSV
 ```

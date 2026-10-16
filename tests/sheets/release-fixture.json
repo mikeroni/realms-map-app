@@ -1,0 +1,6 @@
+[
+  ["Origin/Destination", "Path", "Location", "X", "Z", "Type", "Owner"],
+  ["Origin", "A to B", "A", 0, -1, "Base", "Player"],
+  ["Destination", "A to B", "B", 80, 0, "Base", "Player"],
+  ["Origin", "", "Café 🌳", -20, 40, "Landmark", "Éowyn"]
+]
