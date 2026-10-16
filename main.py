@@ -11,12 +11,22 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from realms.data import load_dataset
+from realms.journeys import (
+    MODE_LABELS,
+    ROUTE_PARAMS,
+    JourneyQuery,
+    format_time,
+    journey_url,
+    parse_journey,
+    route_directions,
+)
 from realms.models import Dataset, Route, TravelMode
 from realms.routing import build_graph, fastest_route
 from realms.tableau import map_url
 
 DATA_PATH = Path(__file__).resolve().parent / "Realms Map Dataset.xlsx"
 LOGGER = logging.getLogger(__name__)
+EXAMPLE = JourneyQuery("Community Base", "Dorne")
 
 
 @st.cache_data(show_spinner=False)
@@ -25,12 +35,58 @@ def cached_dataset(path: str, content_hash: str) -> Dataset:
     return load_dataset(path)
 
 
-def format_time(seconds: float) -> str:
-    minutes, remaining = divmod(int(seconds), 60)
-    return f"{minutes:02d}:{remaining:02d}"
+def route_params() -> dict[str, list[str]]:
+    return {key: st.query_params.get_all(key) for key in ROUTE_PARAMS if key in st.query_params}
 
 
-def render_route(route: Route, dataset: Dataset) -> None:
+def update_journey_url(query: JourneyQuery | None) -> None:
+    params = {
+        key: st.query_params.get_all(key) for key in st.query_params if key not in ROUTE_PARAMS
+    }
+    if query is not None:
+        params.update(query.params())
+    st.query_params.from_dict(params)
+    st.session_state.seen_route_params = route_params()
+
+
+def restore_shared_journey(dataset: Dataset) -> bool:
+    params = route_params()
+    if st.session_state.get("seen_route_params") == params:
+        return False
+    st.session_state.seen_route_params = params
+    st.session_state.route_results = None
+    st.session_state.completed_query = None
+    st.session_state.link_error = None
+    st.session_state.origin = ""
+    st.session_state.destination = ""
+    st.session_state.include_ice = False
+    try:
+        query = parse_journey(params, dataset)
+    except ValueError as exc:
+        st.session_state.link_error = str(exc)
+        return False
+    if query is None:
+        return False
+    st.session_state.origin = query.origin
+    st.session_state.destination = query.destination
+    st.session_state.include_ice = query.include_ice
+    return True
+
+
+def swap_endpoints() -> None:
+    st.session_state.origin, st.session_state.destination = (
+        st.session_state.destination,
+        st.session_state.origin,
+    )
+
+
+def use_example() -> None:
+    st.session_state.origin = EXAMPLE.origin
+    st.session_state.destination = EXAMPLE.destination
+    st.session_state.include_ice = EXAMPLE.include_ice
+
+
+def render_route(route: Route, dataset: Dataset, query: JourneyQuery) -> None:
     details, map_column = st.columns(2)
     with details:
         st.subheader("Route details")
@@ -40,12 +96,22 @@ def render_route(route: Route, dataset: Dataset) -> None:
         time_column, distance_column = st.columns(2)
         time_column.metric("Estimated travel time", format_time(route.total_time))
         distance_column.metric("Estimated distance", f"{route.total_distance:.0f} blocks")
+        copy_column, share_column = st.columns(2)
+        with copy_column.popover("Copy directions", use_container_width=True):
+            st.caption("Use the copy icon in the top-right corner, or select the text.")
+            st.code(
+                route_directions(route, dataset, query.include_ice), language=None, wrap_lines=True
+            )
+        with share_column.popover("Share journey", use_container_width=True):
+            st.caption("Copy this link to reopen the journey, including its ice setting.")
+            url = journey_url(st.context.url or "https://realms-map-app.onrender.com/", query)
+            st.code(url, language=None, wrap_lines=True)
+            st.caption("Journeys are recalculated with the current workbook when opened.")
         st.subheader("Route steps")
-        labels = {TravelMode.WALK: "Walk", TravelMode.RAIL: "Rail", TravelMode.ICE: "Ice highway"}
         for number, segment in enumerate(route.segments, start=1):
             edge = segment.edge
             location = dataset.locations[edge.destination]
-            label = f"{labels[edge.mode]} to {location.label}"
+            label = f"{MODE_LABELS[edge.mode]} to {location.label}"
             if edge.mode is TravelMode.WALK:
                 label += f" ({location.x:g}, {location.z:g})"
             with st.expander(f"Step {number}: {label}"):
@@ -78,12 +144,18 @@ def main() -> None:
     # Discard old results when the workbook changes, including in a live session.
     if st.session_state.get("data_version") != version:
         st.session_state.route_results = None
+        st.session_state.completed_query = None
+        st.session_state.seen_route_params = None
         st.session_state.data_version = version
         for key in ("origin", "destination"):
             if st.session_state.get(key) not in dataset.locations:
                 st.session_state[key] = ""
-    if not isinstance(st.session_state.get("route_results"), Route):
+    if not isinstance(st.session_state.get("route_results"), Route) or not isinstance(
+        st.session_state.get("completed_query"), JourneyQuery
+    ):
         st.session_state.route_results = None
+
+    from_link = restore_shared_journey(dataset)
 
     locations = sorted(dataset.locations, key=lambda key: dataset.locations[key].label.casefold())
 
@@ -100,10 +172,35 @@ def main() -> None:
             "Destination", [""] + locations, format_func=label, key="destination"
         )
         include_ice = st.checkbox("Include ice highway routes", key="include_ice")
-        submitted = st.form_submit_button("Find fastest route", type="primary")
+        find_column, swap_column, example_column = st.columns(3)
+        submitted = find_column.form_submit_button(
+            "Find fastest route", type="primary", use_container_width=True
+        )
+        swapped = swap_column.form_submit_button(
+            "Swap endpoints", on_click=swap_endpoints, use_container_width=True
+        )
+        example_available = all(
+            key in dataset.locations for key in (EXAMPLE.origin, EXAMPLE.destination)
+        )
+        example = example_column.form_submit_button(
+            "Try an example journey",
+            on_click=use_example,
+            disabled=not example_available,
+            use_container_width=True,
+            help="Community Base to Dorne, using the existing rail network.",
+        )
+        if not example_available:
+            st.caption("The example is unavailable because its locations have changed.")
 
-    if submitted:
+    if swapped:
         st.session_state.route_results = None
+        st.session_state.completed_query = None
+        st.session_state.link_error = None
+        update_journey_url(None)
+    if submitted or example or from_link or (swapped and origin and destination):
+        st.session_state.route_results = None
+        st.session_state.completed_query = None
+        st.session_state.link_error = None
         if not origin or not destination:
             st.warning("Please select both origin and destination.")
         elif origin == destination:
@@ -116,13 +213,21 @@ def main() -> None:
                 st.session_state.route_results = fastest_route(graph, origin, destination)
                 if st.session_state.route_results is None:
                     st.warning("No route connects these locations.")
+                else:
+                    st.session_state.completed_query = JourneyQuery(
+                        origin, destination, include_ice
+                    )
             except ValueError as exc:
                 LOGGER.exception("Could not calculate a route")
                 st.error(f"The route could not be calculated: {exc}")
+        update_journey_url(st.session_state.completed_query)
+
+    if st.session_state.get("link_error"):
+        st.warning(st.session_state.link_error)
 
     route = st.session_state.route_results
     if route is not None:
-        render_route(route, dataset)
+        render_route(route, dataset, st.session_state.completed_query)
     with st.expander("How estimates work"):
         st.write(
             "Routes minimize estimated travel time, not distance. Rail uses 8 blocks/second, walking 3, and ice highways 72."

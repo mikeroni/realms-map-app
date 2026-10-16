@@ -12,6 +12,16 @@ A route planner for a Minecraft Realm. It compares estimated travel times by rai
 - Combines rail and walking, with an optional ice-highway network.
 - Shows travel time, distance, individual legs, and walking coordinates.
 - Filters the Tableau map to the route's rail segments. Walking and ice legs remain in the written directions.
+- Swaps endpoints, copies directions, and shares a journey link with its ice-highway setting.
+- Offers a one-click example from Community Base to Dorne using the existing rail network.
+
+## Using the route controls
+
+Choose both locations and select **Find fastest route**. **Swap endpoints** reverses the current selections and calculates the return journey when both locations are selected. It keeps your ice-highway setting. **Try an example journey** selects Community Base to Dorne with ice disabled and calculates it immediately.
+
+After a search, **Copy directions** opens the journey text, including coordinates and estimated times. Use the copy icon in its top-right corner, or select the text manually. **Share journey** offers a copyable link that restores both locations and the ice setting and calculates the route when opened. The browser address also reflects the last completed search, so it can be bookmarked. Copying and sharing refer to the displayed result, not unsubmitted form edits.
+
+Links use the current app address and exact workbook location names, for example `?from=Community+Base&to=Dorne&ice=0`. They recalculate using the workbook available when opened; they are not frozen route snapshots. A renamed or removed location produces a warning rather than a guessed substitute. Local-preview links stay local.
 
 ## Run locally
 
@@ -58,6 +68,8 @@ After editing the workbook, run the tests below and verify representative routes
 
 `archive/browser-prototype/realms_data.csv` belongs to the earlier browser prototype and is not read by the Python app. It is not automatically synchronized with the workbook.
 
+Excel and the manually published Tableau workbook remain the network's source of truth. The route controls do not add connections, rename paths, or generate new Tableau geometry. Shared journeys still pass only the existing rail path names to the map.
+
 ## Project layout
 
 ```text
@@ -66,10 +78,12 @@ realms/
   data.py                  Workbook loading and validation
   models.py                Locations, links, edges, and route records
   routing.py               Graph construction and fastest-route search
+  journeys.py              Journey links and copyable directions
   tableau.py               Tableau URL and filter construction
 tests/
   test_routing.py           Data, routing, and URL tests
   test_app.py               Streamlit interaction regressions
+  test_journeys.py           Share-link validation and directions tests
 Realms Map Dataset.xlsx     Maintained Python application data
 requirements.txt           Runtime dependency versions
 requirements-dev.txt       Runtime and development dependencies
@@ -88,7 +102,7 @@ python -m ruff check .
 python -m ruff format --check .
 ```
 
-The suite covers malformed data, exact location selection, walking and ice-only stations, colocated locations, missing inputs after a successful search, and clearing old map filters. An independent Bellman-Ford solver checks every source/destination pair in the bundled network with ice disabled and enabled. UI tests use Streamlit's AppTest; they do not contact Tableau or verify in-game terrain.
+The suite covers malformed data, exact location selection, walking and ice-only stations, colocated locations, missing inputs after a successful search, and clearing old map filters. It also covers swapping edited selections, the example journey, share-link round trips and validation, and keeping copied/shared details attached to the displayed result. An independent Bellman-Ford solver checks every source/destination pair in the bundled network with ice disabled and enabled. UI tests use Streamlit's AppTest; they do not contact Tableau, exercise the browser clipboard, or verify in-game terrain.
 
 GitHub Actions is configured to run these checks on Python 3.11 and 3.12 for pull requests and changes to `main`. Runtime dependencies are pinned to the versions used by the existing application environment; this cleanup does not claim a dependency security audit or pin every transitive package.
 
