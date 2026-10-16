@@ -4,7 +4,7 @@ const {readFileSync} = require('node:fs');
 const {join} = require('node:path');
 const {server} = require('../tests/sheets/fake-sheets.cjs');
 const instance = server();
-const methods = new Set(['getEditorState', 'addLocation', 'previewConnections', 'addConnections', 'prepareRelease', 'approveRelease']);
+const methods = new Set(['getEditorState', 'addLocation', 'previewConnections', 'addConnections', 'previewEdit', 'applyEdit', 'prepareRelease', 'approveRelease']);
 const shim = `<script>
   window.google = {script: {get run() {
     let success, failure;

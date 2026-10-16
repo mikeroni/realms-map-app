@@ -2,6 +2,7 @@
 
 const EXPORT_TAB = '_App Export';
 const RELEASE_TAB = '_App Release';
+const EDIT_RECOVERY_KEY = 'realm-tools:pending-edit';
 
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('Realm tools').addItem('Locations and rails', 'showRealmEditor').addToUi();
@@ -14,7 +15,11 @@ function showRealmEditor() {
 function locked_(operation) {
   const lock = LockService.getDocumentLock();
   if (!lock.tryLock(10000)) throw new Error('Another editor is saving. Please try again.');
-  try { return operation(SpreadsheetApp.getActiveSpreadsheet()); }
+  try {
+    const book = SpreadsheetApp.getActiveSpreadsheet();
+    checkRecovery_(book);
+    return operation(book);
+  }
   finally {
     try { SpreadsheetApp.flush(); }
     finally { lock.releaseLock(); }
@@ -35,12 +40,39 @@ function source_(book) {
   return {
     master: read_(book, 'Master Locations'),
     maps: Object.fromEntries(Object.entries(RealmData.worlds).map(([world, tab]) => [world, read_(book, tab)])),
+    claims: read_(book, 'Land Claim Data'),
   };
 }
 
-function digest_(values) {
-  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, RealmData.canonical(values), Utilities.Charset.UTF_8)
+function hash_(text) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, text, Utilities.Charset.UTF_8)
     .map(byte => (byte & 255).toString(16).padStart(2, '0')).join('');
+}
+
+function revision_(source) {
+  // Empty trailing rows can disappear from getDataRange after a deletion/rollback.
+  const trim = rows => {
+    let end = rows.length;
+    while (end > 1 && rows[end - 1].every(value => value === '')) end--;
+    return rows.slice(0, end);
+  };
+  return hash_(JSON.stringify({master: trim(source.master),
+    maps: Object.fromEntries(Object.entries(source.maps).map(([world, rows]) => [world, trim(rows)])),
+    claims: trim(source.claims)}));
+}
+
+function checkRecovery_(book) {
+  const properties = PropertiesService.getDocumentProperties();
+  const pending = properties.getProperty(EDIT_RECOVERY_KEY);
+  if (!pending) return;
+  const {before, after} = JSON.parse(pending);
+  const current = revision_(source_(book));
+  if (current === before || current === after) properties.deleteProperty(EDIT_RECOVERY_KEY);
+  else throw new Error('A previous edit was interrupted or could not be restored. Stop editing and restore the affected source data with Sheets version history, then reload. Publishing is blocked until the original or complete edited data is restored.');
+}
+
+function digest_(values) {
+  return hash_(RealmData.canonical(values));
 }
 
 function append_(book, tab, rows) {
@@ -60,6 +92,7 @@ function getEditorState() {
     const data = RealmData.model(source.master, source.maps);
     return {
       locations: [...data.places.values()], warnings: data.warnings,
+      revision: revision_(source),
       connections: [...data.networks.Overworld.paths.values()].map(rows => [rows[0][2], rows[1][2]]),
       release: release_(book),
     };
@@ -94,6 +127,97 @@ function addConnections(input) {
     }
     append_(book, 'Tableau Data', plan.rows);
     return {message: plan.added.length + ' rail connection(s) added.'};
+  });
+}
+
+function editPlan_(book, input) {
+  const source = source_(book);
+  if (input.revision !== revision_(source)) {
+    throw new Error('Sheet data changed since you loaded it. Reload data and review the edit again.');
+  }
+  const plan = RealmData.planEdit(source, input);
+  return {source, plan, token: hash_(JSON.stringify({source, input, plan}))};
+}
+
+function previewEdit(input) {
+  return locked_(book => {
+    const {plan, token} = editPlan_(book, input);
+    return {token, summary: plan.summary, destructive: plan.destructive};
+  });
+}
+
+function changedRanges_(before, after) {
+  const tables = source => ({'Master Locations': source.master,
+    ...Object.fromEntries(Object.entries(RealmData.worlds).map(([world, tab]) => [tab, source.maps[world]])),
+    'Land Claim Data': source.claims});
+  const oldTables = tables(before), newTables = tables(after), changes = [];
+  for (const [tab, oldRows] of Object.entries(oldTables)) {
+    const newRows = newTables[tab], width = oldRows[0].length;
+    if (JSON.stringify(oldRows[0]) !== JSON.stringify(newRows[0])) throw new Error('An edit cannot change column headings.');
+    let block;
+    for (let index = 1; index < Math.max(oldRows.length, newRows.length); index++) {
+      const oldRow = oldRows[index] || Array(width).fill('');
+      const newRow = newRows[index] || Array(width).fill('');
+      if (JSON.stringify(oldRow) === JSON.stringify(newRow)) { block = null; continue; }
+      if (!block) { block = {tab, start: index + 1, width, before: [], after: []}; changes.push(block); }
+      block.before.push(oldRow); block.after.push(newRow);
+    }
+  }
+  return changes;
+}
+
+// SpreadsheetApp has no multi-tab transaction. Preflight every range, then keep
+// originals for rollback on a reported failure. Never replace connected sheets.
+function writeEdit_(book, changes, before, after) {
+  for (const change of changes) {
+    if ([...change.before, ...change.after].some(row => row.some(value => typeof value === 'string' && value.startsWith('=')))) {
+      throw new Error('Affected rows contain formula-like literal text. Resolve it in the Sheet before editing. Nothing was saved.');
+    }
+    const sheet = book.getSheetByName(change.tab);
+    const end = change.start + change.after.length - 1;
+    if (end > sheet.getMaxRows()) sheet.insertRowsAfter(sheet.getMaxRows(), end - sheet.getMaxRows());
+    change.range = sheet.getRange(change.start, 1, change.after.length, change.width);
+    if (!change.range.canEdit()) throw new Error('You cannot edit all affected cells in ' + change.tab + '. Nothing was saved.');
+    if (JSON.stringify(change.range.getValues()) !== JSON.stringify(change.before)) {
+      throw new Error('Cells changed while preparing the edit. Reload and review again.');
+    }
+  }
+  const properties = PropertiesService.getDocumentProperties();
+  properties.setProperty(EDIT_RECOVERY_KEY, JSON.stringify({before: revision_(before), after: revision_(after)}));
+  const attempted = [];
+  try {
+    for (const change of changes) {
+      attempted.push(change); // Include a range whose write might only partially succeed.
+      change.range.setValues(change.after);
+      SpreadsheetApp.flush();
+      if (JSON.stringify(change.range.getValues()) !== JSON.stringify(change.after)) throw new Error('Could not verify saved cells in ' + change.tab + '.');
+    }
+    if (revision_(source_(book)) !== revision_(after)) throw new Error('Source data changed during this save.');
+    properties.deleteProperty(EDIT_RECOVERY_KEY);
+  } catch (error) {
+    let restored = true;
+    for (const change of attempted.reverse()) {
+      try {
+        change.range.setValues(change.before);
+        SpreadsheetApp.flush();
+        if (JSON.stringify(change.range.getValues()) !== JSON.stringify(change.before)) restored = false;
+      } catch (_) { restored = false; }
+    }
+    if (restored) properties.deleteProperty(EDIT_RECOVERY_KEY);
+    throw new Error((restored ? 'Save failed; original cell values were restored. Reload before retrying. '
+      : 'Save failed and recovery was incomplete. Stop editing and restore the affected data with Sheets version history before publishing. ') + error.message);
+  }
+}
+
+function applyEdit(input, token, confirmed) {
+  return locked_(book => {
+    const result = editPlan_(book, input);
+    if (token !== result.token) throw new Error('The edit does not match its preview. Preview it again.');
+    if (result.plan.destructive && confirmed !== true) throw new Error('Confirm the removal before saving.');
+    const changes = changedRanges_(result.source, result.plan.next);
+    if (!changes.length) return {message: 'No changes to save.'};
+    writeEdit_(book, changes, result.source, result.plan.next);
+    return {message: 'Changes saved. Refresh Tableau, then prepare and approve a new snapshot to update the app.'};
   });
 }
 
