@@ -2,6 +2,7 @@
 const RealmData = (() => {
   const masterHeader = ['World', 'Location', 'X', 'Z', 'Type', 'Owner'];
   const mapHeader = ['Origin/Destination', 'Path', 'Location', 'X', 'Z', 'Type', 'Owner'];
+  const claimHeader = ['shapeId', 'shapeType', 'shapeLabel', 'pointId', 'X', 'Z', 'Type', 'Owner'];
   const worlds = {Overworld: 'Tableau Data', Nether: 'Nether Data', End: 'End Data'};
 
   function text(value) {
@@ -159,6 +160,105 @@ const RealmData = (() => {
     return {rows, added};
   }
 
+  function matches(value, name) { return text(value).toLowerCase() === name.toLowerCase(); }
+  function copySource(source) {
+    return {
+      master: source.master.map(row => row.slice()),
+      maps: Object.fromEntries(Object.entries(source.maps).map(([world, rows]) => [world, rows.map(row => row.slice())])),
+      claims: source.claims.map(row => row.slice()),
+    };
+  }
+
+  // Plans contain only data. The service verifies the preview and writes in place.
+  function planEdit(source, input) {
+    const data = model(source.master, source.maps);
+    const next = copySource(source);
+    const summary = [];
+    let destructive = false;
+    if (input.action === 'location' || input.action === 'delete-location') {
+      const previous = data.places.get(key({world: input.world, name: field(input.originalName, 'Original location')}));
+      if (!previous) throw new Error('Location no longer exists. Reload the sidebar.');
+      const network = data.networks[previous.world];
+      const connected = [...network.paths].filter(([, rows]) => rows.some(row => matches(row[2], previous.name)));
+      table(source.claims, claimHeader, 'Land Claim Data');
+      const claimRows = previous.world === 'Overworld'
+        ? source.claims.slice(1).filter(row => matches(row[2], previous.name)) : [];
+      if (input.action === 'delete-location') {
+        if (connected.length) throw new Error('Remove this location’s ' + connected.length + ' connection(s) first. No connected locations are deleted.');
+        if (claimRows.length) throw new Error('This place has a land-claim polygon. Resolve that claim in the Sheet before removing the place.');
+        next.master = next.master.filter((row, index) => !index || text(row[0]) !== previous.world || !matches(row[1], previous.name));
+        next.maps[previous.world] = next.maps[previous.world].filter((row, index) => !index || !matches(row[2], previous.name));
+        summary.push('Remove ' + previous.name + ' from Master Locations and ' + worlds[previous.world] + '.');
+        destructive = true;
+      } else {
+        const place = location([input.newWorld ?? previous.world, input.name, input.x, input.z, input.type, input.owner]);
+        const moved = place.world !== previous.world;
+        if (moved && connected.length) throw new Error('Remove this location’s connections before moving it to another world.');
+        if (moved && claimRows.length) throw new Error('This place has an Overworld land-claim polygon. Resolve that claim in the Sheet before moving the place.');
+        if (key(place) !== key(previous) && data.places.has(key(place))) throw new Error('Another location in this world already has that name.');
+        if (place.world === 'Overworld' && (moved || !matches(place.name, previous.name))
+            && source.claims.slice(1).some(row => matches(row[2], place.name))) {
+          throw new Error('Another land claim already uses the new location name. Resolve it in the Sheet first.');
+        }
+        if (connected.length && place.name.includes(',')) throw new Error('Connected location names cannot contain commas (Tableau filter delimiter).');
+        for (const [fieldName, label] of [['world', 'World'], ['name', 'Name'], ['owner', 'Owner'], ['type', 'Type'], ['x', 'X'], ['z', 'Z']]) {
+          if (previous[fieldName] !== place[fieldName]) summary.push(label + ': ' + (previous[fieldName] === '' ? '(blank)' : previous[fieldName]) + ' → ' + (place[fieldName] === '' ? '(blank)' : place[fieldName]));
+        }
+        next.master = next.master.map((row, index) => index && text(row[0]) === previous.world && matches(row[1], previous.name)
+          ? [place.world, place.name, place.x, place.z, place.type, place.owner] : row);
+        if (moved) {
+          next.maps[previous.world] = next.maps[previous.world].filter((row, index) => !index || !matches(row[2], previous.name));
+          if (network.places.has(key(previous))) next.maps[place.world].push(mapRow(place));
+        } else {
+          next.maps[previous.world] = next.maps[previous.world].map((row, index) => index && matches(row[2], previous.name)
+            ? [row[0], row[1], place.name, place.x, place.z, place.type, place.owner] : row);
+        }
+        const claimChanges = [['name', 2], ['type', 6], ['owner', 7]].filter(([name]) => previous[name] !== place[name]);
+        if (claimRows.length && claimChanges.length) {
+          for (const [name, column] of claimChanges) {
+            if (name !== 'name' && claimRows.some(row => text(row[column]) !== previous[name])) {
+              throw new Error('The matching land claim has a different ' + name + '. Resolve that mismatch in the Sheet first.');
+            }
+          }
+          next.claims = next.claims.map((row, index) => {
+            if (!index || !matches(row[2], previous.name)) return row;
+            const updated = row.slice();
+            for (const [name, column] of claimChanges) updated[column] = place[name];
+            return updated;
+          });
+          summary.push('Update matching land-claim labels/details (' + claimRows.length + ' polygon rows). Boundaries stay unchanged.');
+        }
+        if (summary.length) summary.push('Update every copy in this world. Existing Path IDs stay unchanged.');
+      }
+    } else if (input.action === 'rails') {
+      if (input.world !== 'Overworld') throw new Error('This editor changes Overworld rail connections only.');
+      const sourcePlace = data.places.get(key({world: 'Overworld', name: field(input.source, 'Source')}));
+      if (!sourcePlace) throw new Error('Source location no longer exists. Reload the sidebar.');
+      const additions = planConnections(source.master, source.maps, input);
+      const desired = new Set(input.destinations.map(name => key({world: 'Overworld', name: field(name, 'Destination')})));
+      const removed = [...data.networks.Overworld.paths].filter(([, rows]) =>
+        rows.some(row => row[2] === sourcePlace.name) && rows.some(row => row[2] !== sourcePlace.name && !desired.has(key({world: 'Overworld', name: row[2]}))));
+      const removedIds = new Set(removed.map(([name]) => name));
+      // Keep a standalone point only when no surviving/new row represents it.
+      // Repeated remove/add cycles must not accumulate duplicate point rows.
+      const retained = new Set([...next.maps.Overworld.slice(1).filter(row => !removedIds.has(row[1])), ...additions.rows]
+        .map(row => text(row[2]).toLowerCase()));
+      next.maps.Overworld = next.maps.Overworld.flatMap((row, index) => {
+        if (!index || !removedIds.has(row[1])) return [row];
+        const id = text(row[2]).toLowerCase();
+        if (retained.has(id)) return [];
+        retained.add(id);
+        return [['Origin', '', ...row.slice(2)]];
+      }).concat(additions.rows);
+      for (const [name, rows] of removed) summary.push('Remove: ' + rows[0][2] + ' ↔ ' + rows[1][2] + ' (Path: ' + name + ')');
+      for (const name of additions.added) summary.push('Add: ' + name);
+      if (removed.length) summary.push('Endpoint locations stay on the map. Both directions of each removed rail link are removed.');
+      destructive = removed.length > 0;
+    } else throw new Error('Unknown edit action.');
+    model(next.master, next.maps);
+    return {next, summary, destructive};
+  }
+
   // Hash coordinates as decimal strings, avoiding JSON number-format differences across runtimes.
   function canonical(values) {
     const checked = validateMap(values, 'Overworld');
@@ -171,5 +271,5 @@ const RealmData = (() => {
     return JSON.stringify([mapHeader, ...rows]);
   }
 
-  return {masterHeader, mapHeader, worlds, model, planLocation, planConnections, canonical, validateMap};
+  return {masterHeader, mapHeader, claimHeader, worlds, model, planLocation, planConnections, planEdit, canonical, validateMap};
 })();

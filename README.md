@@ -72,7 +72,7 @@ The maintained Google Sheet is the authoring source; the bundled Excel file is t
 
 ### Google Sheets editor and publishing
 
-The optional [Sheets sidebar](apps-script/README.md) adds master locations and Overworld rail connections inside the **existing Google spreadsheet**. It preserves the spreadsheet URL, connected tabs, column headings, and existing path names. There is no public write endpoint and the Streamlit app receives no Google credentials.
+The optional [Sheets sidebar](apps-script/README.md) adds and edits locations and manages Overworld rail connections inside the **existing Google spreadsheet**. Location edits update repeated map rows and matching land-claim labels/details. Rail removals preserve their endpoint places; location deletion and world moves are guarded against attached links or claims. Reviewed edits preserve the spreadsheet URL, connected tabs, column headings, polygon geometry, and surviving path IDs. There is no public write endpoint and the Streamlit app receives no Google credentials.
 
 Its publishing flow prepares a snapshot, asks you to verify Tableau's refresh, and approves that exact data for GitHub. The `Publish approved Sheet data` workflow validates and tests the Excel export before committing it. Owner setup is required; hourly polling is disabled unless the repository variable `SHEET_SYNC_ENABLED` is explicitly enabled. Installation, Google authentication, and the Tableau/Render deployment round must be verified before live use.
 

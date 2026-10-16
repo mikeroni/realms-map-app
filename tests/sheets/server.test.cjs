@@ -67,3 +67,148 @@ test('existing unowned internal tabs are never overwritten', () => {
   assert.throws(() => context.prepareRelease(), /not owned/);
   assert.deepEqual(sheet.rows, [['Keep me']]);
 });
+
+const editInput = context => ({action: 'location', revision: context.getEditorState().revision,
+  world: 'Overworld', originalName: 'A', name: 'New A', x: 15, z: -25, type: 'Town', owner: 'New Player'});
+const railInput = context => ({action: 'rails', revision: context.getEditorState().revision,
+  world: 'Overworld', source: 'A', destinations: []});
+
+test('edit preview is read-only; a confirmed edit preserves sheet IDs, headers, and export approval', () => {
+  const instance = server(), {context, sheets} = instance;
+  const draft = context.prepareRelease();
+  context.approveRelease({releaseId: draft.release_id, tableauConfirmed: true});
+  const before = instance.source(), snapshot = JSON.stringify(sheets.get('_App Export').rows);
+  const ids = [...sheets.values()].map(sheet => sheet.id);
+  const headers = [...sheets.values()].map(sheet => sheet.rows[0]);
+  const input = editInput(context), preview = context.previewEdit(input);
+  assert.equal(instance.source(), before);
+  context.applyEdit(input, preview.token, true);
+  assert.deepEqual([...sheets.values()].map(sheet => sheet.id), ids);
+  assert.deepEqual([...sheets.values()].map(sheet => sheet.rows[0]), headers);
+  assert.equal(sheets.get('Master Locations').rows[1][1], 'New A');
+  assert.equal(sheets.get('Tableau Data').rows[1][2], 'New A');
+  assert.equal(sheets.get('Land Claim Data').rows[1][2], 'New A');
+  assert.equal(JSON.stringify(sheets.get('_App Export').rows), snapshot);
+  assert.equal(context.getEditorState().release.status, 'approved');
+});
+test('stale forms, stale previews, and tampered edit inputs cannot overwrite newer data', () => {
+  const instance = server(), {context, sheets} = instance;
+  const input = editInput(context), preview = context.previewEdit(input);
+  assert.throws(() => context.applyEdit({...input, owner: 'Tampered'}, preview.token, true), /match its preview/);
+  sheets.get('Land Claim Data').rows[1][4] = 99;
+  const before = instance.source();
+  assert.throws(() => context.previewEdit(input), /changed since/);
+  assert.throws(() => context.applyEdit(input, preview.token, true), /changed since/);
+  assert.equal(instance.source(), before);
+});
+test('removals require explicit confirmation and preserve both endpoint locations', () => {
+  const instance = server(), {context, sheets} = instance, before = instance.source();
+  const input = railInput(context), preview = context.previewEdit(input);
+  assert.equal(preview.destructive, true);
+  assert.throws(() => context.applyEdit(input, preview.token, false), /Confirm the removal/);
+  assert.equal(instance.source(), before);
+  context.applyEdit(input, preview.token, true);
+  assert.equal(context.getEditorState().connections.length, 0);
+  assert.equal(sheets.get('Tableau Data').rows[1][2], 'A');
+  assert.equal(sheets.get('Tableau Data').rows[2][2], 'B');
+  assert.throws(() => context.applyEdit(input, preview.token, true), /changed since/);
+});
+test('edit preflight rejects protected cells before any source values change', () => {
+  const instance = server(), {context, sheets} = instance, before = instance.source();
+  const input = editInput(context), preview = context.previewEdit(input);
+  sheets.get('Land Claim Data').protected = true;
+  assert.throws(() => context.applyEdit(input, preview.token, true), /cannot edit/);
+  assert.equal(instance.source(), before);
+});
+test('a write failure in any edited tab rolls back earlier writes and releases the lock', () => {
+  for (const tab of ['Master Locations', 'Tableau Data', 'Land Claim Data']) {
+    const instance = server(), {context, sheets, lock, properties} = instance, before = instance.source();
+    const input = editInput(context), preview = context.previewEdit(input);
+    sheets.get(tab).failWrite = true;
+    assert.throws(() => context.applyEdit(input, preview.token, true), /original cell values were restored/);
+    assert.equal(instance.source(), before);
+    assert.equal(lock.held, false);
+    assert.equal(properties.has('realm-tools:pending-edit'), false);
+    context.applyEdit(input, preview.token, true);
+    assert.equal(sheets.get('Master Locations').rows[1][1], 'New A');
+  }
+});
+test('interrupted edits block further edits and publishing until source data is recovered', () => {
+  const {context, sheets, properties} = server();
+  const before = context.getEditorState().revision;
+  properties.set('realm-tools:pending-edit', JSON.stringify({before, after: 'different-revision'}));
+  sheets.get('Master Locations').rows[1][1] = 'Half-saved';
+  assert.throws(() => context.prepareRelease(), /previous edit was interrupted/);
+  assert.throws(() => context.getEditorState(), /previous edit was interrupted/);
+  assert.throws(() => context.addLocation({}), /previous edit was interrupted/);
+  sheets.get('Master Locations').rows[1][1] = 'A';
+  context.getEditorState();
+  assert.equal(properties.has('realm-tools:pending-edit'), false);
+});
+test('place deletion compacts only affected data, clears obsolete tail rows, and remains valid', () => {
+  const {context, sheets} = server();
+  const input = {...editInput(context), action: 'delete-location', originalName: 'Café 🌳'};
+  const preview = context.previewEdit(input);
+  assert.throws(() => context.applyEdit(input, preview.token, false), /Confirm/);
+  context.applyEdit(input, preview.token, true);
+  assert.equal(context.getEditorState().locations.some(place => place.name === 'Café 🌳'), false);
+  assert.ok(sheets.get('Master Locations').rows[3].every(value => value === ''));
+  assert.ok(sheets.get('Tableau Data').rows[3].every(value => value === ''));
+});
+test('edits after preparation cannot be approved as the old snapshot', () => {
+  const {context} = server(), draft = context.prepareRelease();
+  const input = editInput(context), preview = context.previewEdit(input);
+  context.applyEdit(input, preview.token, true);
+  assert.throws(() => context.approveRelease({releaseId: draft.release_id, tableauConfirmed: true}), /changed after/);
+});
+test('failed rollback leaves a persistent recovery guard until original values are restored', () => {
+  const {context, sheets, properties} = server();
+  const original = structuredClone(sheets.get('Master Locations').rows);
+  const input = editInput(context), preview = context.previewEdit(input);
+  sheets.get('Tableau Data').failWrite = true;
+  sheets.get('Master Locations').failWriteAt = [2];
+  assert.throws(() => context.applyEdit(input, preview.token, true), /recovery was incomplete/);
+  assert.equal(properties.has('realm-tools:pending-edit'), true);
+  assert.throws(() => context.prepareRelease(), /previous edit was interrupted/);
+  sheets.get('Master Locations').rows = original;
+  context.getEditorState();
+  assert.equal(properties.has('realm-tools:pending-edit'), false);
+});
+test('a fully saved operation with an uncleared recovery marker can resume safely', () => {
+  const {context, properties} = server();
+  properties.set('realm-tools:pending-edit', JSON.stringify({before: 'old-revision', after: context.getEditorState().revision}));
+  context.getEditorState();
+  assert.equal(properties.has('realm-tools:pending-edit'), false);
+});
+test('world moves write the new map and remove obsolete old rows, preserving all sheet IDs', () => {
+  const {context, sheets} = server();
+  const ids = [...sheets.values()].map(sheet => sheet.id);
+  const input = {...editInput(context), originalName: 'Café 🌳', newWorld: 'End', name: 'Moved café'};
+  const preview = context.previewEdit(input);
+  context.applyEdit(input, preview.token, true);
+  assert.ok(context.getEditorState().locations.some(place => place.name === 'Moved café' && place.world === 'End'));
+  assert.equal(context.getEditorState().locations.some(place => place.name === 'Café 🌳'), false);
+  assert.equal(sheets.get('End Data').rows[1][2], 'Moved café');
+  assert.deepEqual([...sheets.values()].map(sheet => sheet.id), ids);
+});
+test('formula-like claim literals are rejected before writing or executing them', () => {
+  const instance = server(), {context, sheets} = instance;
+  sheets.get('Land Claim Data').rows[1][1] = '=unsafe()';
+  const before = instance.source(), input = editInput(context), preview = context.previewEdit(input);
+  assert.throws(() => context.applyEdit(input, preview.token, true), /formula-like literal/);
+  assert.equal(instance.source(), before);
+});
+test('moving or hiding internal tabs does not alter edits or snapshot publication', () => {
+  const {context, sheets} = server(); context.prepareRelease();
+  for (const name of ['_App Export', '_App Release']) {
+    const sheet = sheets.get(name); sheet.hidden = true;
+    sheets.delete(name); sheets.set(name, sheet);
+  }
+  const input = editInput(context), preview = context.previewEdit(input);
+  context.applyEdit(input, preview.token, true);
+  const draft = context.prepareRelease();
+  context.approveRelease({releaseId: draft.release_id, tableauConfirmed: true});
+  assert.equal(sheets.get('_App Export').hidden, true);
+  assert.equal(sheets.get('_App Release').hidden, true);
+  assert.equal(sheets.size, 7);
+});

@@ -2,19 +2,30 @@
 
 Install this **inside the existing Google spreadsheet that Tableau uses**. Do not
 import a replacement workbook, rename connected tabs, or reconnect Tableau. The
-editor appends rows and preserves existing tab IDs, headings, path names, and
-unrelated data. Opening the sidebar does not write anything.
+editor preserves existing tab IDs, headings, surviving path IDs, and unrelated
+data. Opening the sidebar does not change source data.
 
 ## Features and limits
 
 - Add a master location in Overworld, Nether, or End, optionally adding a standalone
   point to that world's existing map-data tab.
-- Add Overworld rail links by checking destinations and reviewing a preview.
-  Existing links are checked and read-only. Links are bidirectional.
+- Edit a location's name, owner, type, X/Z coordinates, or world. Repeated rows in
+  that world's map data stay consistent. Matching Overworld land-claim labels,
+  owners, and types update too; conflicting claim details require manual resolution.
+- Add or remove Overworld rail links by checking/unchecking destinations and
+  reviewing a preview. Links are bidirectional. Removing a link keeps both places
+  on the map, without accumulating duplicate standalone points on repeated edits.
+- Remove an unconnected location after reviewing and confirming its removal.
+  Locations with connections or land claims cannot be deleted. Cross-world moves
+  have the same safeguards; coordinates are not automatically scaled.
 - Prepare and approve a frozen Overworld export for the Python app. GitHub reads
   that snapshot, never unapproved live edits.
-- No removal, rename, coordinate editing, land-claim drawing, or Nether/End link
-  editing in this version. Transport assumptions are unchanged.
+- `Origin/Destination`, `Path`, `shapeType`, and `shapeId` are controlled by the
+  data rules, not editable form fields. Renaming a location does not rename its
+  existing Path IDs, even when an ID contains the old name.
+- No polygon drawing, boundary/point editing, or Nether/End connection editing.
+  Editing a location's coordinates does not move its land-claim polygon.
+  Transport assumptions are unchanged.
 
 Use the desktop Google Sheets browser editor. Local tests simulate Google services;
 native sidebar behavior and authorization require installation-time verification.
@@ -38,17 +49,55 @@ native sidebar behavior and authorization require installation-time verification
 6. Verify locations and existing connections. A mapped location missing from the
    master list is retained and reported, not automatically removed or backfilled.
 
+### Update an already installed sidebar
+
+1. Close any open Realm tools sidebars. Make a backup or name the current Sheet
+   version before your first real edit.
+2. Open **Extensions → Apps Script** in the same spreadsheet and replace the
+   contents of `Domain.gs`, `Code.gs`, and `Sidebar.html` with the updated files.
+   Update all three together. Leave `appsscript.json` and the Google/GitHub setup
+   unchanged; this update requests no new permissions or services.
+3. Save, reload the spreadsheet, and reopen **Realm tools → Locations and rails**.
+   No deployment is needed. Confirm the new **Edit place** section appears.
+4. In **Edit place**, choose the existing world and place, edit the fields, then
+   **Preview edits → Save reviewed changes**. Owner changes apply to this one
+   place and its matching claim, not all places owned by that player.
+5. In **Rails**, choose the source, check destinations to add and uncheck existing
+   destinations to remove, then preview and save. Removals require a separate
+   confirmation. Filtering the list does not discard hidden checked destinations.
+6. Verify the changed points, labels, and routes in Tableau, then follow the
+   snapshot preparation/approval flow below. Edits never automatically approve
+   or replace the frozen app export.
+
+#### Preview mismatch fix
+
+If adding a place works but every previewed edit fails with
+"The edit does not match its preview", update `Code.gs` to the version that uses
+`previewJson_` in `editPlan_`. The earlier fingerprint depended on object property
+order across separate requests, so unchanged inputs could be rejected.
+
+For an installation that already has **Edit place** and rail removal controls,
+only `Code.gs` needs replacing for this fix. Save the script, close the sidebar,
+reload the spreadsheet, reopen Realm tools, and make a fresh preview. Existing
+previews are not valid after the update. No deployment, new permissions, Sheet
+replacement, or manual removal of the places already added is required.
+
 Required original headers, in this order:
 
 | Tab | Columns |
 | --- | --- |
 | Master Locations | World, Location, X, Z, Type, Owner |
 | Tableau Data / Nether Data / End Data | Origin/Destination, Path, Location, X, Z, Type, Owner |
+| Land Claim Data | shapeId, shapeType, shapeLabel, pointId, X, Z, Type, Owner |
 
 The editor expects literal values and whole block X/Z coordinates. It stops on
 unexpected schemas, formulas, conflicting metadata, or malformed existing paths.
-Whitespace is normalized for comparisons, as in the Python app, but existing rows
-are not rewritten. Names are unique within a world, ignoring case.
+Whitespace is normalized for comparisons, as in the Python app. Only affected
+source ranges are rewritten. Removals compact affected tables and blank obsolete
+tail cells without deleting/recreating tabs or changing column headings. Names
+are unique within a world, ignoring case. Claims match by location name within
+Overworld; the claim sheet has no world column. Polygon IDs, point IDs, types of
+shapes, coordinates, and vertex order are preserved.
 
 ### Preserve the Tableau connection
 
@@ -78,13 +127,27 @@ First preparation creates `_App Export` and `_App Release` in the **same spreads
 They contain the frozen data and release ID/status/fingerprint/timestamps. They are
 not Tableau inputs. Their ownership is recorded in document properties; preexisting
 tabs with those names are never overwritten automatically. Do not manually edit them.
+You may move these tabs to the end or hide them. Lookups use names/IDs, not tab
+positions or visibility. Do not rename, recreate, or move them to another file.
 Preparing again replaces only this internal snapshot and invalidates its old approval
 before writing data. Original source tabs are never cleared.
 
 The document lock serializes sidebar saves, not direct manual Sheet edits. Avoid
 editing the same rows manually during a sidebar save. If a master write succeeds
 but a map write fails, the error explains this; retrying the identical form completes
-it without duplicating the master entry.
+it without duplicating the master entry. This retry rule applies to **adding** a place.
+
+Edits/removals use a source fingerprint, a verified preview, and a protected-range
+preflight. If anything changed since loading or previewing, reload and review again.
+Reported write failures trigger restoration of the original values. Apps Script
+does not provide a multi-tab transaction: a process interruption or failed rollback
+can still leave partial source changes. A persistent recovery marker then blocks
+further sidebar actions, including preparing/approving a new release, until version
+history restores the original data or the complete intended edit is recovered.
+The marker clears automatically when the source matches either complete state.
+Do not clear it manually or publish partially recovered data. The existing frozen
+approved export is never changed by a source edit, and GitHub may still read that
+previously approved snapshot while recovery is pending.
 
 Only the approved Overworld export goes into GitHub. Master, Nether, End, and
 land-claim tabs are excluded. The public app still needs no Google credentials.

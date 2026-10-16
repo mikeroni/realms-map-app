@@ -12,6 +12,7 @@
     nav { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0; }
     button { cursor: pointer; border: 1px solid #bdc8c1; border-radius: 6px; padding: 9px 11px; background: white; color: #203b2b; font: inherit; }
     button.primary, nav button[aria-pressed="true"] { background: #235d3b; color: white; border-color: #235d3b; }
+    button.danger { color: #8a2020; border-color: #c99c96; }
     button:disabled { cursor: default; opacity: .6; }
     :focus-visible { outline: 3px solid #3978bb; outline-offset: 2px; }
     label { display: block; margin: 12px 0 4px; font-weight: 600; }
@@ -25,15 +26,16 @@
     #status.error { color: #8a2020; background: #fff0ec; }
     #warnings { font-size: 12px; }
     #destinations { max-height: 300px; overflow-y: auto; margin: 12px 0; padding-right: 5px; }
-    #preview { overflow-wrap: anywhere; padding-left: 20px; }
+    #preview, #edit-preview { overflow-wrap: anywhere; padding-left: 20px; }
     #release-state { font-size: 13px; overflow-wrap: anywhere; }
   </style>
 </head>
 <body>
   <h1>Realm tools</h1>
-  <p class="muted">Add places and rail links. Existing paths stay intact.</p>
+  <p class="muted">Manage places and rail links in this Sheet.</p>
   <nav aria-label="Editor sections">
     <button type="button" data-section="location" aria-pressed="true">Add place</button>
+    <button type="button" data-section="edit" aria-pressed="false">Edit place</button>
     <button type="button" data-section="connections" aria-pressed="false">Rails</button>
     <button type="button" data-section="publish" aria-pressed="false">Publish</button>
   </nav>
@@ -60,15 +62,43 @@
     </form>
   </section>
 
+  <section id="edit" hidden>
+    <h2>Edit an existing place</h2>
+    <label for="edit-world">Find in world</label>
+    <select id="edit-world"><option>Overworld</option><option>Nether</option><option>End</option></select>
+    <label for="edit-place">Place</label><select id="edit-place"></select>
+    <form id="edit-form">
+      <label for="edit-target-world">World</label>
+      <select id="edit-target-world"><option>Overworld</option><option>Nether</option><option>End</option></select>
+      <label for="edit-name">Location name</label><input id="edit-name" required maxlength="200" autocomplete="off">
+      <div class="coordinates">
+        <div><label for="edit-x">X</label><input id="edit-x" type="number" step="1" required></div>
+        <div><label for="edit-z">Z</label><input id="edit-z" type="number" step="1" required></div>
+      </div>
+      <label for="edit-type">Type</label><input id="edit-type" list="types" maxlength="200">
+      <label for="edit-owner">Owner</label><input id="edit-owner" list="owners" maxlength="200">
+      <p class="muted">Updates every copy of this place in its world, plus matching Overworld land-claim labels and details. Polygon boundaries and existing Path IDs stay unchanged.</p>
+      <small>An owner change applies to this place, not every place owned by that player. To move worlds, first remove its connections and resolve any land claim. Coordinates are not scaled automatically.</small>
+      <div class="actions"><button type="submit" id="preview-place">Preview edits</button></div>
+    </form>
+    <details>
+      <summary>Remove this place</summary>
+      <p>Remove its connections first. Places with land-claim polygons cannot be deleted here.</p>
+      <button type="button" id="delete-place" class="danger">Preview removal</button>
+    </details>
+    <ul id="edit-preview"></ul>
+    <button type="button" id="save-edit" class="primary" disabled>Save reviewed changes</button>
+  </section>
+
   <section id="connections" hidden>
     <h2>Overworld rail connections</h2>
-    <p class="muted">Existing links are checked and cannot be removed here. Each new link works in both directions.</p>
+    <p class="muted">Check to add a link, uncheck to remove it. Links work in both directions. Removing a link keeps both places on the map.</p>
     <label for="source">From</label><select id="source"></select>
     <label for="filter">Find a destination</label><input id="filter" type="search" placeholder="Filter places">
     <div id="destinations" role="group" aria-label="Destinations"></div>
-    <button type="button" id="preview-button">Preview additions</button>
+    <button type="button" id="preview-button">Preview rail changes</button>
     <ul id="preview"></ul>
-    <button type="button" id="save-rails" class="primary" disabled>Add these rail links</button>
+    <button type="button" id="save-rails" class="primary" disabled>Save reviewed rail changes</button>
   </section>
 
   <section id="publish" hidden>
@@ -91,6 +121,7 @@
     const $ = id => document.getElementById(id);
     let state = null;
     let preview = null;
+    let editPreview = null;
     let busy = false;
 
     function message(text, error = false) {
@@ -104,11 +135,14 @@
       });
     }
     function controls() {
-      document.querySelectorAll('button, input, select').forEach(node => { node.disabled = busy; });
-      document.querySelectorAll('[data-existing]').forEach(node => { node.disabled = true; });
-      $('save-rails').disabled = busy || !preview || !preview.paths.length;
+      document.querySelectorAll('button, input, select').forEach(node => { node.disabled = busy || !state; });
+      $('reload').disabled = busy;
+      $('save-rails').disabled = busy || !preview?.summary.length;
+      $('save-edit').disabled = busy || !editPreview?.summary.length;
+      $('preview-place').disabled = $('delete-place').disabled = busy || !$('edit-place').value;
+      $('preview-button').disabled = busy || !$('source').value;
       $('approve').disabled = busy || state?.release?.status !== 'draft' || !$('tableau-confirmed').checked;
-      $('save-connect').disabled = busy || $('world').value !== 'Overworld';
+      $('save-connect').disabled = busy || !state || $('world').value !== 'Overworld';
     }
     function rpc(method, ...args) {
       return new Promise((resolve, reject) => {
@@ -124,6 +158,22 @@
     }
     function option(value) { const node = document.createElement('option'); node.value = value; node.textContent = value; return node; }
     function invalidatePreview() { preview = null; $('preview').replaceChildren(); controls(); }
+    function invalidateEdit() { editPreview = null; $('edit-preview').replaceChildren(); controls(); }
+    function drawSummary(id, items) {
+      $(id).replaceChildren(...items.map(text => { const item = document.createElement('li'); item.textContent = text; return item; }));
+    }
+    function fillEdit() {
+      const place = state.locations.find(place => place.world === $('edit-world').value && place.name === $('edit-place').value);
+      $('edit-target-world').value = place?.world || $('edit-world').value;
+      for (const field of ['name', 'x', 'z', 'type', 'owner']) $('edit-' + field).value = place?.[field] ?? '';
+      invalidateEdit();
+    }
+    function drawPlaces(preferred) {
+      const previous = preferred || $('edit-place').value;
+      $('edit-place').replaceChildren(...state.locations.filter(place => place.world === $('edit-world').value).map(place => option(place.name)));
+      if ([...$('edit-place').options].some(item => item.value === previous)) $('edit-place').value = previous;
+      fillEdit();
+    }
     function drawDestinations() {
       invalidatePreview();
       const source = $('source').value;
@@ -133,7 +183,7 @@
         const label = document.createElement('label'); label.className = 'check'; label.dataset.name = place.name;
         const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.value = place.name;
         checkbox.checked = existing.has(place.name);
-        if (checkbox.checked) { checkbox.dataset.existing = 'true'; checkbox.disabled = true; }
+        if (checkbox.checked) checkbox.dataset.existing = 'true';
         checkbox.addEventListener('change', invalidatePreview);
         const caption = document.createElement('span'); caption.textContent = place.name + (checkbox.checked ? ' (connected)' : '');
         label.append(checkbox, caption); $('destinations').append(label);
@@ -152,7 +202,7 @@
         : 'No snapshot prepared.';
       controls();
     }
-    async function refresh(selectedSource) {
+    async function refresh(selectedSource, selectedPlace) {
       const previous = selectedSource || $('source').value;
       state = await rpc('getEditorState');
       state.locations.sort((a, b) => a.name.localeCompare(b.name));
@@ -162,12 +212,16 @@
         $(id).replaceChildren(...[...new Set(state.locations.map(place => place[field]).filter(Boolean))].sort().map(option));
       }
       $('warnings').textContent = state.warnings.join(' '); $('warning-box').hidden = !state.warnings.length;
-      drawDestinations(); drawRelease();
+      drawDestinations(); drawPlaces(selectedPlace); drawRelease();
     }
     document.querySelectorAll('nav button').forEach(button => button.addEventListener('click', () => section(button.dataset.section)));
     $('source').addEventListener('change', drawDestinations);
     $('filter').addEventListener('input', filterDestinations);
     $('world').addEventListener('change', controls);
+    $('edit-world').addEventListener('change', () => drawPlaces());
+    $('edit-place').addEventListener('change', fillEdit);
+    $('edit-form').addEventListener('input', invalidateEdit);
+    $('edit-target-world').addEventListener('change', invalidateEdit);
     $('tableau-confirmed').addEventListener('change', controls);
     $('reload').addEventListener('click', () => run(async () => { await refresh(); message('Data reloaded.'); }));
     $('location-form').addEventListener('submit', event => {
@@ -183,15 +237,40 @@
       }).then(() => { if (focusTarget) $(focusTarget).focus(); });
     });
     $('preview-button').addEventListener('click', () => run(async () => {
-      const input = {world: 'Overworld', source: $('source').value,
-        destinations: [...$('destinations').querySelectorAll('input:checked:not([data-existing])')].map(node => node.value)};
-      const paths = await rpc('previewConnections', input);
-      preview = {input, paths}; $('preview').replaceChildren(...paths.map(path => { const node = document.createElement('li'); node.textContent = path; return node; }));
-      message(paths.length ? `${paths.length} new rail connection(s). Review the path names, then add.` : 'No new connections selected.');
+      const input = {action: 'rails', revision: state.revision, world: 'Overworld', source: $('source').value,
+        destinations: [...$('destinations').querySelectorAll('input:checked')].map(node => node.value)};
+      const result = await rpc('previewEdit', input);
+      preview = {input, ...result}; drawSummary('preview', result.summary);
+      message(result.summary.length ? 'Review the additions and removals below before saving.' : 'No rail changes selected.');
     }));
     $('save-rails').addEventListener('click', () => run(async () => {
-      const result = await rpc('addConnections', {...preview.input, preview: preview.paths});
+      if (preview.destructive && !window.confirm('Apply the rail removals shown in this preview? Both endpoint locations will stay on the map.')) {
+        message('Nothing saved.'); return;
+      }
+      const result = await rpc('applyEdit', preview.input, preview.token, true);
       await refresh(); message(result.message);
+    }));
+    function previewPlace(action) {
+      const input = {action, revision: state.revision, world: $('edit-world').value, originalName: $('edit-place').value,
+        newWorld: $('edit-target-world').value,
+        name: $('edit-name').value, x: $('edit-x').value, z: $('edit-z').value, type: $('edit-type').value, owner: $('edit-owner').value};
+      return run(async () => {
+        editPreview = null; drawSummary('edit-preview', []);
+        const result = await rpc('previewEdit', input);
+        editPreview = {input, ...result}; drawSummary('edit-preview', result.summary);
+        message(result.summary.length ? 'Review the changes below before saving.' : 'No changes to this place.');
+      });
+    }
+    $('edit-form').addEventListener('submit', event => { event.preventDefault(); previewPlace('location'); });
+    $('delete-place').addEventListener('click', () => previewPlace('delete-location'));
+    $('save-edit').addEventListener('click', () => run(async () => {
+      if (editPreview.destructive && !window.confirm('Remove ' + editPreview.input.originalName + ' from this world’s master and map data?')) {
+        message('Nothing saved.'); return;
+      }
+      const selected = editPreview.input;
+      const result = await rpc('applyEdit', selected, editPreview.token, true);
+      if (selected.action === 'location') $('edit-world').value = selected.newWorld;
+      await refresh(undefined, selected.action === 'location' ? selected.name.trim() : undefined); message(result.message);
     }));
     $('prepare').addEventListener('click', () => run(async () => {
       if (state.release && !window.confirm('Replace the previous app snapshot and its approval? Existing map data is unchanged.')) {
