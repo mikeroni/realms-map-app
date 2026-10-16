@@ -4,7 +4,7 @@ A route planner for a Minecraft Realm. It compares estimated travel times by rai
 
 [Open the app](https://realms-map-app.onrender.com/) · [View the Tableau map](https://public.tableau.com/views/WayfinderEmbed/Wayfinder)
 
-![A route from Community Base to Dorne with estimated travel time and the rail segment highlighted on the Tableau map](assets/route-example.png)
+![A five-step route from Community Base to Mob Farm with estimated travel time and the rail segments highlighted on the Tableau map](assets/route-example.png)
 
 ## What it does
 
@@ -13,15 +13,15 @@ A route planner for a Minecraft Realm. It compares estimated travel times by rai
 - Shows travel time, distance, individual legs, and walking coordinates.
 - Filters the Tableau map to the route's rail segments. Walking and ice legs remain in the written directions.
 - Swaps endpoints, copies directions, and shares a journey link with its ice-highway setting.
-- Offers a one-click example from Community Base to Dorne using the existing rail network.
+- Offers a five-step example from Community Base to Mob Farm, combining the existing rail network with a final walk.
 
 ## Using the route controls
 
-Choose both locations and select **Find fastest route**. **Swap endpoints** reverses the current selections and calculates the return journey when both locations are selected. It keeps your ice-highway setting. **Try an example journey** selects Community Base to Dorne with ice disabled and calculates it immediately.
+Choose both locations and select **Find fastest route**. **Swap endpoints** reverses the current selections and calculates the return journey when both locations are selected. It keeps your ice-highway setting. **Try an example journey** selects Community Base to Mob Farm with ice disabled and calculates it immediately: rail through Central IHS, Fortune, Petrichor, and Galini, then a walk to the farm.
 
 After a search, **Copy directions** opens the journey text, including coordinates and estimated times. Use the copy icon in its top-right corner, or select the text manually. **Share journey** offers a copyable link that restores both locations and the ice setting and calculates the route when opened. The browser address also reflects the last completed search, so it can be bookmarked. Copying and sharing refer to the displayed result, not unsubmitted form edits.
 
-Links use the current app address and exact workbook location names, for example `?from=Community+Base&to=Dorne&ice=0`. They recalculate using the workbook available when opened; they are not frozen route snapshots. A renamed or removed location produces a warning rather than a guessed substitute. Local-preview links stay local.
+Links use the current app address and exact workbook location names, for example `?from=Community+Base&to=Mob+Farm&ice=0`. They recalculate using the workbook available when opened; they are not frozen route snapshots. A renamed or removed location produces a warning rather than a guessed substitute. Local-preview links stay local.
 
 ## Run locally
 

@@ -102,11 +102,34 @@ with patch.object(main, "cached_dataset", side_effect=ValueError("Missing column
         self.app.checkbox(key="include_ice").set_value(True)
         self.click("Try an example journey")
         route = self.app.session_state["route_results"]
-        self.assertEqual((route.origin, route.destination), ("Community Base", "Dorne"))
-        self.assertEqual(route.total_time, 36.25)
+        self.assertEqual((route.origin, route.destination), ("Community Base", "Mob Farm"))
+        self.assertEqual(
+            [segment.edge.destination for segment in route.segments],
+            ["Central IHS", "Fortune", "Petrichor", "Galini", "Mob Farm"],
+        )
+        self.assertEqual(
+            [segment.edge.mode.value for segment in route.segments],
+            ["rail", "rail", "rail", "rail", "walk"],
+        )
         self.assertFalse(self.app.checkbox(key="include_ice").value)
-        self.assertTrue(route.rail_paths)
+        self.assertEqual(
+            route.rail_paths,
+            ("Comm to C IHS", "C IHS to Fortune", "Fortune to Petrichor", "Petrichor to Galini"),
+        )
         self.assertEqual(len(self.app.get("iframe")), 1)
+
+    def test_example_copy_and_share_include_the_complete_journey(self):
+        self.click("Try an example journey")
+        route = self.app.session_state["route_results"]
+        directions = self.app.code[0].value
+        for number, segment in enumerate(route.segments, start=1):
+            self.assertIn(f"{number}. ", directions)
+            self.assertIn(segment.edge.destination, directions)
+        self.assertIn("5. Walk to Mob Farm", directions)
+        map_params = parse_qs(urlsplit(self.app.get("iframe")[0].proto.src).query)
+        self.assertEqual(map_params["Path"], [",".join(route.rail_paths)])
+        self.open_link(parse_qs(urlsplit(self.app.code[1].value).query))
+        self.assertEqual(self.app.session_state["route_results"], route)
 
     def test_swap_uses_current_form_values_and_preserves_ice(self):
         self.search("Community Base", "Dorne")

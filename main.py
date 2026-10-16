@@ -26,7 +26,7 @@ from realms.tableau import map_url
 
 DATA_PATH = Path(__file__).resolve().parent / "Realms Map Dataset.xlsx"
 LOGGER = logging.getLogger(__name__)
-EXAMPLE = JourneyQuery("Community Base", "Dorne")
+EXAMPLE = JourneyQuery("Community Base", "Mob Farm")
 
 
 @st.cache_data(show_spinner=False)
@@ -187,7 +187,7 @@ def main() -> None:
             on_click=use_example,
             disabled=not example_available,
             use_container_width=True,
-            help="Community Base to Dorne, using the existing rail network.",
+            help="Community Base to Mob Farm: four rail legs and a final walk.",
         )
         if not example_available:
             st.caption("The example is unavailable because its locations have changed.")
