@@ -6,6 +6,22 @@ const root = join(__dirname, '../..');
 const fixture = JSON.parse(readFileSync(join(__dirname, 'release-fixture.json'), 'utf8'));
 const masterHeader = ['World', 'Location', 'X', 'Z', 'Type', 'Owner'];
 
+// Stress the RPC boundary: copy values and deliberately rebuild object keys in
+// a different order. This is not a complete google.script.run implementation.
+// Array order is data (rows, cells, destinations) and must never be reordered.
+function rpcCopy(value, reverseKeys = false) {
+  const reorder = item => {
+    if (Array.isArray(item)) return item.map(reorder);
+    if (item && typeof item === 'object') {
+      const keys = Object.keys(item).sort();
+      if (reverseKeys) keys.reverse();
+      return Object.fromEntries(keys.map(key => [key, reorder(item[key])]));
+    }
+    return item;
+  };
+  return reorder(JSON.parse(JSON.stringify(value)));
+}
+
 class Sheet {
   constructor(name, rows, id) { this.name = name; this.rows = structuredClone(rows); this.id = id; this.capacity = 1000; }
   getSheetId() { return this.id; }
@@ -56,4 +72,4 @@ function server() {
   return {context, sheets, lock, properties, source: () => JSON.stringify([...sheets].filter(([name]) => !name.startsWith('_')).map(([name, sheet]) => [name, sheet.id, sheet.rows]))};
 }
 
-module.exports = {server, Sheet, fixture};
+module.exports = {server, Sheet, fixture, rpcCopy};

@@ -2,7 +2,7 @@
 const http = require('node:http');
 const {readFileSync} = require('node:fs');
 const {join} = require('node:path');
-const {server} = require('../tests/sheets/fake-sheets.cjs');
+const {server, rpcCopy} = require('../tests/sheets/fake-sheets.cjs');
 const instance = server();
 const methods = new Set(['getEditorState', 'addLocation', 'previewConnections', 'addConnections', 'previewEdit', 'applyEdit', 'prepareRelease', 'approveRelease']);
 const shim = `<script>
@@ -37,8 +37,9 @@ http.createServer(async (request, response) => {
     }
     const {method, args} = JSON.parse(body);
     if (!methods.has(method)) throw new Error('Unknown preview method.');
-    const value = instance.context[method](...args);
-    response.writeHead(200, {'Content-Type': 'application/json'}); response.end(JSON.stringify({value}));
+    // Exercise independent RPC copies and differing object key order on save.
+    const value = instance.context[method](...rpcCopy(args, method === 'applyEdit'));
+    response.writeHead(200, {'Content-Type': 'application/json'}); response.end(JSON.stringify({value: rpcCopy(value, true)}));
   } catch (error) {
     response.writeHead(400, {'Content-Type': 'application/json'}); response.end(JSON.stringify({error: error.message}));
   }

@@ -49,6 +49,14 @@ function hash_(text) {
     .map(byte => (byte & 255).toString(16).padStart(2, '0')).join('');
 }
 
+function previewJson_(value) {
+  // RPC calls copy objects; property insertion order is not part of an edit.
+  // Sort object keys recursively, but retain array order and primitive types so
+  // changed rows, coordinates, destinations, and plans still invalidate tokens.
+  return JSON.stringify(value, (_, item) => item && typeof item === 'object' && !Array.isArray(item)
+    ? Object.fromEntries(Object.keys(item).sort().map(key => [key, item[key]])) : item);
+}
+
 function revision_(source) {
   // Empty trailing rows can disappear from getDataRange after a deletion/rollback.
   const trim = rows => {
@@ -136,7 +144,7 @@ function editPlan_(book, input) {
     throw new Error('Sheet data changed since you loaded it. Reload data and review the edit again.');
   }
   const plan = RealmData.planEdit(source, input);
-  return {source, plan, token: hash_(JSON.stringify({source, input, plan}))};
+  return {source, plan, token: hash_(previewJson_({source, input, plan}))};
 }
 
 function previewEdit(input) {

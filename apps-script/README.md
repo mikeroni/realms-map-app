@@ -69,6 +69,19 @@ native sidebar behavior and authorization require installation-time verification
    snapshot preparation/approval flow below. Edits never automatically approve
    or replace the frozen app export.
 
+#### Preview mismatch fix
+
+If adding a place works but every previewed edit fails with
+"The edit does not match its preview", update `Code.gs` to the version that uses
+`previewJson_` in `editPlan_`. The earlier fingerprint depended on object property
+order across separate requests, so unchanged inputs could be rejected.
+
+For an installation that already has **Edit place** and rail removal controls,
+only `Code.gs` needs replacing for this fix. Save the script, close the sidebar,
+reload the spreadsheet, reopen Realm tools, and make a fresh preview. Existing
+previews are not valid after the update. No deployment, new permissions, Sheet
+replacement, or manual removal of the places already added is required.
+
 Required original headers, in this order:
 
 | Tab | Columns |
