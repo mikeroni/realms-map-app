@@ -111,9 +111,23 @@ python -m ruff check .
 python -m ruff format --check .
 ```
 
+For the Sheets sidebar and archived browser rendering tests, use Node.js 22:
+
+```sh
+node --test tests/sheets/*.test.cjs tests/browser-prototype/*.test.cjs
+```
+
 The suite covers malformed data, exact location selection, walking and ice-only stations, colocated locations, missing inputs after a successful search, and clearing old map filters. It also covers swapping edited selections, the example journey, share-link round trips and validation, and keeping copied/shared details attached to the displayed result. An independent Bellman-Ford solver checks every source/destination pair in the bundled network with ice disabled and enabled. UI tests use Streamlit's AppTest; they do not contact Tableau, exercise the browser clipboard, or verify in-game terrain.
 
-GitHub Actions is configured to run these checks on Python 3.11 and 3.12 for pull requests and changes to `main`. Runtime dependencies are pinned to the versions used by the existing application environment; this cleanup does not claim a dependency security audit or pin every transitive package.
+GitHub Actions runs the Python checks on 3.11 and 3.12 and the JavaScript checks on Node.js 22 for pull requests and changes to `main`. The archived-page regression tests reject HTML parsing of route labels, including names containing markup. Runtime dependencies are pinned; not every transitive package is pinned.
+
+## Security and maintenance
+
+Report vulnerabilities privately using the instructions in [SECURITY.md](SECURITY.md). Use [GitHub Issues](https://github.com/mikeroni/realms-map-app/issues) for ordinary bugs and route-data corrections.
+
+Dependabot proposes routine Python and GitHub Actions updates monthly, with minor and patch version updates grouped and at most two open routine PRs per ecosystem. Security-update PRs are handled separately. Review the changes and passing tests before merging; dependency updates are not automatically merged. Workflow actions use full commit pins.
+
+CodeQL is configured through GitHub's default setup for Python, JavaScript/TypeScript, and GitHub Actions. It complements the tests, but does not establish that every component is secure. In particular, do not assume the Apps Script `.gs` files or Google's service permissions are covered by the JavaScript scan; those still need targeted review.
 
 ## Render deployment
 
