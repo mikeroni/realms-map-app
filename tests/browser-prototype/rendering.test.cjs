@@ -6,9 +6,13 @@ const vm = require('node:vm');
 
 const prototype = path.join(__dirname, '../../archive/browser-prototype');
 const html = fs.readFileSync(path.join(prototype, 'index.html'), 'utf8');
-const inlineScripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
-  .filter(match => !/\bsrc\s*=/.test(match[1]))
-  .map(match => match[2]);
+// Extract this repository's fixture scripts, not arbitrary HTML or user input.
+function extractInlineScripts(source) {
+  return [...source.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\b[^>]*>/gi)]
+    .filter(match => !/\bsrc\s*=/.test(match[1]))
+    .map(match => match[2]);
+}
+const inlineScripts = extractInlineScripts(html);
 
 function loadPage(rows) {
   const select = () => ({value: '', options: [], add(option) { this.options.push(option); }});
@@ -56,6 +60,14 @@ function connectedRows(start, end) {
     {Location: end, X: '3', Z: '4', Path: 'Test rail'},
   ];
 }
+
+test('page test loader handles script closing-tag variants and skips external scripts', () => {
+  for (const close of ['</script>', '</script >', '</SCRIPT\t>', '</script ignored="true">']) {
+    assert.deepEqual(extractInlineScripts(
+      '<script src="app.js"></script><script>const loaded = true;' + close),
+    ['const loaded = true;']);
+  }
+});
 
 test('route output keeps labels literal, with only one explicit line break', () => {
   for (const name of [
