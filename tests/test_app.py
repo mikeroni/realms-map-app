@@ -141,7 +141,7 @@ with patch.object(main, "cached_dataset", side_effect=ValueError("Missing column
         self.assertEqual((route.origin, route.destination), ("Eastern IHS", "Northern IHS"))
         self.assertTrue(self.app.checkbox(key="include_ice").value)
         self.assertEqual(len(self.app.get("iframe")), 0)
-        self.assertEqual(self.app.query_params["ice"], ["1"])
+        self.assertEqual(self.app.query_params["ice"], "1")
         self.click("Swap endpoints")
         self.assertEqual(self.app.session_state["route_results"].origin, "Northern IHS")
 
