@@ -60,9 +60,13 @@
 
       const resultDiv = document.getElementById("result");
       if (result.path.length > 0) {
-        resultDiv.innerHTML = `Path: ${result.path.join(" ➜ ")}<br>Total Distance: ${result.total.toFixed(2)} units`;
+        resultDiv.replaceChildren(
+          `Path: ${result.path.join(" ➜ ")}`,
+          document.createElement("br"),
+          `Total Distance: ${result.total.toFixed(2)} units`
+        );
       } else {
-        resultDiv.innerHTML = "No path found.";
+        resultDiv.textContent = "No path found.";
       }
     }
   </script>
